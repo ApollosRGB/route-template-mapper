@@ -1,0 +1,76 @@
+[
+  {
+    "fromNode": "1",
+    "fromNavigationGraph": "KMP 400P-1-5G diffDrive",
+    "to": [
+      {
+        "navigationGraph": "tusk",
+        "nodes": [
+          "0011"
+        ]
+      }
+    ]
+  },
+  {
+    "fromNode": "10",
+    "fromNavigationGraph": "KMP 400P-1-5G diffDrive",
+    "to": [
+      {
+        "navigationGraph": "tusk",
+        "nodes": [
+          "0014"
+        ]
+      }
+    ]
+  },
+  {
+    "fromNode": "11",
+    "fromNavigationGraph": "KMP 400P-1-5G diffDrive",
+    "to": [
+      {
+        "navigationGraph": "tusk",
+        "nodes": [
+          "0014"
+        ]
+      }
+    ]
+  },
+  {
+    "fromNode": "6",
+    "fromNavigationGraph": "KMP 400P-1-5G diffDrive",
+    "to": [
+      {
+        "navigationGraph": "tusk",
+        "nodes": [
+          "0011"
+        ]
+      }
+    ]
+  },
+  {
+    "fromNode": "0011",
+    "fromNavigationGraph": "tusk",
+    "to": [
+      {
+        "navigationGraph": "KMP 400P-1-5G diffDrive",
+        "nodes": [
+          "1",
+          "6"
+        ]
+      }
+    ]
+  },
+  {
+    "fromNode": "0014",
+    "fromNavigationGraph": "tusk",
+    "to": [
+      {
+        "navigationGraph": "KMP 400P-1-5G diffDrive",
+        "nodes": [
+          "10",
+          "11"
+        ]
+      }
+    ]
+  }
+]

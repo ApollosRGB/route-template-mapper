@@ -1,0 +1,318 @@
+{
+  "templates": [
+    {
+      "id": "kuka_edge",
+      "nodes": [
+        "A",
+        "B"
+      ],
+      "edges": [
+        {
+          "id": "AB",
+          "startNode": "A",
+          "endNode": "B"
+        }
+      ],
+      "steps": [
+        {
+          "reference": "A",
+          "type": "node",
+          "actions": [],
+          "attributes": []
+        },
+        {
+          "reference": "AB",
+          "type": "edge",
+          "actions": [],
+          "attributes": [
+            {
+              "key": "maxSpeed",
+              "value": "MAXSPEED_AB"
+            }
+          ]
+        },
+        {
+          "reference": "B",
+          "type": "node",
+          "actions": [],
+          "attributes": []
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "id": "kuka_edge_11_17_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "11"
+        },
+        {
+          "key": "B",
+          "value": "17"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_17_11_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "17"
+        },
+        {
+          "key": "B",
+          "value": "11"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_11_6_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "11"
+        },
+        {
+          "key": "B",
+          "value": "6"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_6_11_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "6"
+        },
+        {
+          "key": "B",
+          "value": "11"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_10_16_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "10"
+        },
+        {
+          "key": "B",
+          "value": "16"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_16_10_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "16"
+        },
+        {
+          "key": "B",
+          "value": "10"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_1_10_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "1"
+        },
+        {
+          "key": "B",
+          "value": "10"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_1_6_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "1"
+        },
+        {
+          "key": "B",
+          "value": "6"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_6_1_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "6"
+        },
+        {
+          "key": "B",
+          "value": "1"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_8_13_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "8"
+        },
+        {
+          "key": "B",
+          "value": "13"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_13_8_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "13"
+        },
+        {
+          "key": "B",
+          "value": "8"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_7_8_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "7"
+        },
+        {
+          "key": "B",
+          "value": "8"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    },
+    {
+      "id": "kuka_edge_5_1_mapping",
+      "template": "kuka_edge",
+      "actionMapping": false,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "5"
+        },
+        {
+          "key": "B",
+          "value": "1"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        }
+      ],
+      "navigationGraphId": "KMP 400P-1-5G diffDrive"
+    }
+  ]
+}

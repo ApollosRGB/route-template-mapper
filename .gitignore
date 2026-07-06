@@ -1,0 +1,14 @@
+# dependencies & build outputs (rebuild with: npm install / npm run package)
+node_modules/
+release/
+
+# Python virtualenv & caches (MapGenerator)
+.venv/
+__pycache__/
+
+# Reference app binaries — its 177 MB exe exceeds GitHub's 100 MB file limit
+Robot Template Editor/
+
+# local tooling/session files
+.claude/
+*.log

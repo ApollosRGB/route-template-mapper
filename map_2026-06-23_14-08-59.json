@@ -1,0 +1,621 @@
+{
+  "id": "map",
+  "name": "None",
+  "description": "Made with SYNAOS MapGenerator Editor",
+  "navigationGraphs": [
+    {
+      "id": "KMP 400P-1-5G diffDrive",
+      "agvTypes": [
+        {
+          "vendorName": "kuka",
+          "typeName": "KMP 400P-1-5G diffDrive"
+        }
+      ],
+      "graphToMapTransformation": {
+        "xTranslation": 0,
+        "yTranslation": 0,
+        "zTranslation": 0,
+        "zRotation": 0
+      },
+      "nodes": [
+        {
+          "id": "1",
+          "graphX": 18.55,
+          "graphY": 10.366,
+          "graphZ": 0
+        },
+        {
+          "id": "10",
+          "graphX": 18.55,
+          "graphY": 8.424,
+          "graphZ": 0
+        },
+        {
+          "id": "11",
+          "graphX": 16,
+          "graphY": 8.424,
+          "graphZ": 0
+        },
+        {
+          "id": "13",
+          "graphX": 26.058,
+          "graphY": 8.424,
+          "graphZ": 0
+        },
+        {
+          "id": "15",
+          "graphX": 26.058,
+          "graphY": 6.1,
+          "graphZ": 0
+        },
+        {
+          "id": "16",
+          "graphX": 18.552,
+          "graphY": 6.177,
+          "graphZ": 0
+        },
+        {
+          "id": "17",
+          "graphX": 16,
+          "graphY": 6.177,
+          "graphZ": 0
+        },
+        {
+          "id": "2",
+          "graphX": 23.839,
+          "graphY": 10.366,
+          "graphZ": 0
+        },
+        {
+          "id": "4",
+          "graphX": 21.822,
+          "graphY": 10.366,
+          "graphZ": 0
+        },
+        {
+          "id": "5",
+          "graphX": 20.087,
+          "graphY": 10.366,
+          "graphZ": 0
+        },
+        {
+          "id": "6",
+          "graphX": 16,
+          "graphY": 10.366,
+          "graphZ": 0
+        },
+        {
+          "id": "7",
+          "graphX": 21.822,
+          "graphY": 8.424,
+          "graphZ": 0
+        },
+        {
+          "id": "8",
+          "graphX": 23.864,
+          "graphY": 8.424,
+          "graphZ": 0
+        },
+        {
+          "id": "9",
+          "graphX": 20.087,
+          "graphY": 8.424,
+          "graphZ": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "1-10",
+          "startNodeId": "1",
+          "endNodeId": "10"
+        },
+        {
+          "id": "1-6",
+          "startNodeId": "1",
+          "endNodeId": "6"
+        },
+        {
+          "id": "10-16",
+          "startNodeId": "10",
+          "endNodeId": "16"
+        },
+        {
+          "id": "10-9",
+          "startNodeId": "10",
+          "endNodeId": "9"
+        },
+        {
+          "id": "11-10",
+          "startNodeId": "11",
+          "endNodeId": "10"
+        },
+        {
+          "id": "11-17",
+          "startNodeId": "11",
+          "endNodeId": "17"
+        },
+        {
+          "id": "11-6",
+          "startNodeId": "11",
+          "endNodeId": "6"
+        },
+        {
+          "id": "13-15",
+          "startNodeId": "13",
+          "endNodeId": "15"
+        },
+        {
+          "id": "13-8",
+          "startNodeId": "13",
+          "endNodeId": "8"
+        },
+        {
+          "id": "15-13",
+          "startNodeId": "15",
+          "endNodeId": "13"
+        },
+        {
+          "id": "16-10",
+          "startNodeId": "16",
+          "endNodeId": "10"
+        },
+        {
+          "id": "17-11",
+          "startNodeId": "17",
+          "endNodeId": "11"
+        },
+        {
+          "id": "2-4",
+          "startNodeId": "2",
+          "endNodeId": "4"
+        },
+        {
+          "id": "4-5",
+          "startNodeId": "4",
+          "endNodeId": "5"
+        },
+        {
+          "id": "5-1",
+          "startNodeId": "5",
+          "endNodeId": "1"
+        },
+        {
+          "id": "6-1",
+          "startNodeId": "6",
+          "endNodeId": "1"
+        },
+        {
+          "id": "6-11",
+          "startNodeId": "6",
+          "endNodeId": "11"
+        },
+        {
+          "id": "7-8",
+          "startNodeId": "7",
+          "endNodeId": "8"
+        },
+        {
+          "id": "8-13",
+          "startNodeId": "8",
+          "endNodeId": "13"
+        },
+        {
+          "id": "8-2",
+          "startNodeId": "8",
+          "endNodeId": "2"
+        },
+        {
+          "id": "9-7",
+          "startNodeId": "9",
+          "endNodeId": "7"
+        }
+      ]
+    },
+    {
+      "id": "tusk",
+      "agvTypes": [
+        {
+          "vendorName": "Tuskrobots",
+          "typeName": "E10"
+        }
+      ],
+      "graphToMapTransformation": {
+        "xTranslation": -7.11536,
+        "yTranslation": -3.19676,
+        "zTranslation": 0,
+        "zRotation": 0
+      },
+      "nodes": [
+        {
+          "id": "0000",
+          "graphX": 12.5,
+          "graphY": 7.1,
+          "graphZ": 0
+        },
+        {
+          "id": "0002",
+          "graphX": 16.8,
+          "graphY": 7.1,
+          "graphZ": 0
+        },
+        {
+          "id": "0003",
+          "graphX": 19,
+          "graphY": 7.1,
+          "graphZ": 0
+        },
+        {
+          "id": "0004",
+          "graphX": 16.8,
+          "graphY": 3.2,
+          "graphZ": 0,
+          "parkingSpot": {
+            "allowLoadedAgvs": false
+          }
+        },
+        {
+          "id": "0005",
+          "graphX": 12.5,
+          "graphY": 5.4,
+          "graphZ": 0
+        },
+        {
+          "id": "0007",
+          "graphX": 14.5,
+          "graphY": 7.1,
+          "graphZ": 0
+        },
+        {
+          "id": "0011",
+          "graphX": 10.2,
+          "graphY": 7.1,
+          "graphZ": 0
+        },
+        {
+          "id": "0013",
+          "graphX": 10.2,
+          "graphY": 4.45324,
+          "graphZ": 0
+        },
+        {
+          "id": "0014",
+          "graphX": 10.2,
+          "graphY": 5.4,
+          "graphZ": 0
+        },
+        {
+          "id": "0015",
+          "graphX": 14.5,
+          "graphY": 5.4,
+          "graphZ": 0
+        },
+        {
+          "id": "0016",
+          "graphX": 16.8,
+          "graphY": 5.4,
+          "graphZ": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "0000_0011",
+          "startNodeId": "0000",
+          "endNodeId": "0011"
+        },
+        {
+          "id": "0002_0003",
+          "startNodeId": "0002",
+          "endNodeId": "0003"
+        },
+        {
+          "id": "0002_0007",
+          "startNodeId": "0002",
+          "endNodeId": "0007"
+        },
+        {
+          "id": "0002_0016",
+          "startNodeId": "0002",
+          "endNodeId": "0016"
+        },
+        {
+          "id": "0003_0002",
+          "startNodeId": "0003",
+          "endNodeId": "0002"
+        },
+        {
+          "id": "0004_0016",
+          "startNodeId": "0004",
+          "endNodeId": "0016"
+        },
+        {
+          "id": "0005_0015",
+          "startNodeId": "0005",
+          "endNodeId": "0015"
+        },
+        {
+          "id": "0007_0000",
+          "startNodeId": "0007",
+          "endNodeId": "0000"
+        },
+        {
+          "id": "0011_0014",
+          "startNodeId": "0011",
+          "endNodeId": "0014"
+        },
+        {
+          "id": "0013_0014",
+          "startNodeId": "0013",
+          "endNodeId": "0014"
+        },
+        {
+          "id": "0014_0005",
+          "startNodeId": "0014",
+          "endNodeId": "0005"
+        },
+        {
+          "id": "0014_0013",
+          "startNodeId": "0014",
+          "endNodeId": "0013"
+        },
+        {
+          "id": "0015_0016",
+          "startNodeId": "0015",
+          "endNodeId": "0016"
+        },
+        {
+          "id": "0016_0002",
+          "startNodeId": "0016",
+          "endNodeId": "0002"
+        },
+        {
+          "id": "0016_0004",
+          "startNodeId": "0016",
+          "endNodeId": "0004"
+        }
+      ]
+    }
+  ],
+  "waitingSpots": [
+    {
+      "id": "WS_Kuka",
+      "nodes": [
+        {
+          "navigationGraphId": "KMP 400P-1-5G diffDrive",
+          "nodeId": "6"
+        },
+        {
+          "navigationGraphId": "KMP 400P-1-5G diffDrive",
+          "nodeId": "2"
+        }
+      ]
+    },
+    {
+      "id": "WS_tusk",
+      "nodes": [
+        {
+          "navigationGraphId": "tusk",
+          "nodeId": "0005"
+        },
+        {
+          "navigationGraphId": "tusk",
+          "nodeId": "0016"
+        }
+      ]
+    }
+  ],
+  "handlingStationGroups": [
+    {
+      "id": "K1-G",
+      "controlled": false,
+      "justInSequence": false,
+      "stationAutomaticSelectionMode": "ALWAYS",
+      "handlingStations": [
+        {
+          "id": "K1",
+          "mapX": 16,
+          "mapY": 5.6637,
+          "mapZ": 0,
+          "width": 5,
+          "height": 5,
+          "length": 5,
+          "actions": [],
+          "accessNodes": [
+            {
+              "navigationGraphId": "KMP 400P-1-5G diffDrive",
+              "nodeId": "17"
+            }
+          ]
+        }
+      ],
+      "waitingSpots": [
+        {
+          "id": "WS_Kuka"
+        }
+      ]
+    },
+    {
+      "id": "K2-G",
+      "controlled": false,
+      "justInSequence": false,
+      "stationAutomaticSelectionMode": "ALWAYS",
+      "handlingStations": [
+        {
+          "id": "K2",
+          "mapX": 18.53766,
+          "mapY": 5.61402,
+          "mapZ": 0,
+          "width": 5,
+          "height": 5,
+          "length": 5,
+          "actions": [],
+          "accessNodes": [
+            {
+              "navigationGraphId": "KMP 400P-1-5G diffDrive",
+              "nodeId": "16"
+            }
+          ]
+        }
+      ],
+      "waitingSpots": [
+        {
+          "id": "WS_Kuka"
+        }
+      ]
+    },
+    {
+      "id": "K3-G",
+      "controlled": false,
+      "justInSequence": false,
+      "stationAutomaticSelectionMode": "ALWAYS",
+      "handlingStations": [
+        {
+          "id": "K3",
+          "mapX": 26.85626,
+          "mapY": 8.44568,
+          "mapZ": 0,
+          "width": 5,
+          "height": 5,
+          "length": 5,
+          "actions": [],
+          "accessNodes": [
+            {
+              "navigationGraphId": "KMP 400P-1-5G diffDrive",
+              "nodeId": "13"
+            }
+          ]
+        }
+      ],
+      "waitingSpots": [
+        {
+          "id": "WS_Kuka"
+        }
+      ]
+    },
+    {
+      "id": "T1-G",
+      "controlled": false,
+      "justInSequence": false,
+      "stationAutomaticSelectionMode": "ALWAYS",
+      "handlingStations": [
+        {
+          "id": "T1",
+          "mapX": 27.61536,
+          "mapY": 10.29676,
+          "mapZ": 0,
+          "width": 5,
+          "height": 5,
+          "length": 5,
+          "actions": [],
+          "accessNodes": [
+            {
+              "navigationGraphId": "tusk",
+              "nodeId": "0003"
+            }
+          ]
+        }
+      ],
+      "waitingSpots": [
+        {
+          "id": "WS_tusk"
+        }
+      ]
+    },
+    {
+      "id": "T2-G",
+      "controlled": false,
+      "justInSequence": false,
+      "stationAutomaticSelectionMode": "ALWAYS",
+      "handlingStations": [
+        {
+          "id": "T2",
+          "mapX": 17.31536,
+          "mapY": 6.14676,
+          "mapZ": 0,
+          "width": 5,
+          "height": 5,
+          "length": 5,
+          "actions": [],
+          "accessNodes": [
+            {
+              "navigationGraphId": "tusk",
+              "nodeId": "0013"
+            }
+          ]
+        }
+      ],
+      "waitingSpots": [
+        {
+          "id": "WS_tusk"
+        }
+      ]
+    }
+  ],
+  "chargingStations": [],
+  "trafficLights": [],
+  "areas": [
+    {
+      "id": "Base1",
+      "points": [
+        {
+          "mapX": 15,
+          "mapY": 10
+        },
+        {
+          "mapX": 20,
+          "mapY": 10
+        },
+        {
+          "mapX": 20,
+          "mapY": 8
+        },
+        {
+          "mapX": 15,
+          "mapY": 8
+        }
+      ]
+    },
+    {
+      "id": "Base2",
+      "points": [
+        {
+          "mapX": 21,
+          "mapY": 10
+        },
+        {
+          "mapX": 25,
+          "mapY": 10
+        },
+        {
+          "mapX": 25,
+          "mapY": 8
+        },
+        {
+          "mapX": 21,
+          "mapY": 8
+        }
+      ]
+    }
+  ],
+  "emergencyDetectors": [
+    {
+      "id": "All Lanes Detector",
+      "areas": [
+        "Base1",
+        "Base2"
+      ]
+    },
+    {
+      "id": "Base1 Detector",
+      "areas": [
+        "Base1"
+      ]
+    },
+    {
+      "id": "Base2 Detector",
+      "areas": [
+        "Base2"
+      ]
+    }
+  ],
+  "limitedCapacityAreas": []
+}

@@ -1,0 +1,7 @@
+PySimpleGUI>=4.19
+Matplotlib
+Numpy
+Scipy
+geomdl
+svgwrite
+shapely

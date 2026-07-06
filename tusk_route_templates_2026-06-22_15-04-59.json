@@ -1,0 +1,838 @@
+{
+  "templates": [
+    {
+      "id": "TUSK_DROPOFF",
+      "steps": [
+        {
+          "reference": "A",
+          "type": "node",
+          "actions": [
+            {
+              "actionName": "$DROP",
+              "blockingType": "HARD",
+              "actionParameters": [
+                {
+                  "key": "autoReturnNode",
+                  "value": "DROP_AUTORETURNNODE_A",
+                  "dataType": "boolean"
+                },
+                {
+                  "key": "containerTheta",
+                  "value": "DROP_CONTAINERTHETA_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "containerTypeId",
+                  "value": "DROP_CONTAINERTYPEID_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "containerX",
+                  "value": "DROP_CONTAINERX_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "containerY",
+                  "value": "DROP_CONTAINERY_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "description",
+                  "value": "DROP_DESCRIPTION_A",
+                  "dataType": "string"
+                },
+                {
+                  "key": "detectBeforeDrop",
+                  "value": "detectBeforeDrop_1",
+                  "dataType": "boolean"
+                },
+                {
+                  "key": "onlyFork",
+                  "value": "DROP_ONLYFORK_A",
+                  "dataType": "boolean"
+                }
+              ],
+              "targetHandlingStationCondition": {
+                "externalId": "DROP_EXTERNAL_STATION_ID_A",
+                "loaded": null
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "key": "mapTheta",
+              "value": "MAPTHETA_A"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TUSK_PICKUP",
+      "steps": [
+        {
+          "reference": "A",
+          "type": "node",
+          "actions": [
+            {
+              "actionName": "$PICK",
+              "blockingType": "HARD",
+              "actionParameters": [
+                {
+                  "key": "autoReturnNode",
+                  "value": "PICK_AUTORETURNNODE_A",
+                  "dataType": "boolean"
+                },
+                {
+                  "key": "containerTheta",
+                  "value": "PICK_CONTAINERTHETA_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "containerTypeId",
+                  "value": "PICK_CONTAINERTYPEID_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "containerX",
+                  "value": "PICK_CONTAINERX_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "containerY",
+                  "value": "PICK_CONTAINERY_A",
+                  "dataType": "number"
+                },
+                {
+                  "key": "description",
+                  "value": "PICK_DESCRIPTION_A",
+                  "dataType": "string"
+                },
+                {
+                  "key": "onlyFork",
+                  "value": "PICK_ONLYFORK_A",
+                  "dataType": "boolean"
+                }
+              ],
+              "targetHandlingStationCondition": {
+                "externalId": "PICK_EXTERNAL_STATION_ID_A",
+                "loaded": null
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "key": "mapTheta",
+              "value": "MAPTHETA_A"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tusk_edge",
+      "steps": [
+        {
+          "reference": "A",
+          "type": "node",
+          "actions": [],
+          "attributes": []
+        },
+        {
+          "reference": "AB",
+          "type": "edge",
+          "actions": [],
+          "attributes": [
+            {
+              "key": "maxSpeed",
+              "value": "MAXSPEED_AB"
+            },
+            {
+              "key": "orientation",
+              "value": "ORIENTATION_AB"
+            },
+            {
+              "key": "orientationType",
+              "value": "ORIENTATIONTYPE_AB"
+            }
+          ]
+        },
+        {
+          "reference": "B",
+          "type": "node",
+          "actions": [],
+          "attributes": []
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "id": "TUSK_DROPOFF_0003_mapping",
+      "template": "TUSK_DROPOFF",
+      "actionMapping": false,
+      "conditions": {
+        "milestoneTypes": [
+          "DROPOFF"
+        ],
+        "targetActions": [],
+        "agvTypes": [],
+        "usages": []
+      },
+      "entries": [
+        {
+          "key": "A",
+          "value": "0003"
+        },
+        {
+          "key": "DROP_AUTORETURNNODE_A",
+          "value": "true"
+        },
+        {
+          "key": "DROP_CONTAINERTHETA_A",
+          "value": "0"
+        },
+        {
+          "key": "DROP_CONTAINERTYPEID_A",
+          "value": "1"
+        },
+        {
+          "key": "DROP_CONTAINERX_A",
+          "value": "20.5"
+        },
+        {
+          "key": "DROP_CONTAINERY_A",
+          "value": "7.1"
+        },
+        {
+          "key": "DROP_DESCRIPTION_A",
+          "value": ""
+        },
+        {
+          "key": "DROP_EXTERNAL_STATION_ID_A",
+          "value": "T1"
+        },
+        {
+          "key": "DROP_ONLYFORK_A",
+          "value": "true"
+        },
+        {
+          "key": "MAPTHETA_A",
+          "value": "0"
+        },
+        {
+          "key": "detectBeforeDrop_1",
+          "value": "false"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "TUSK_DROPOFF_0013_mapping",
+      "template": "TUSK_DROPOFF",
+      "actionMapping": false,
+      "conditions": {
+        "milestoneTypes": [
+          "DROPOFF"
+        ],
+        "targetActions": [],
+        "agvTypes": [],
+        "usages": []
+      },
+      "entries": [
+        {
+          "key": "A",
+          "value": "0013"
+        },
+        {
+          "key": "DROP_AUTORETURNNODE_A",
+          "value": "true"
+        },
+        {
+          "key": "DROP_CONTAINERTHETA_A",
+          "value": "-1.57"
+        },
+        {
+          "key": "DROP_CONTAINERTYPEID_A",
+          "value": "1"
+        },
+        {
+          "key": "DROP_CONTAINERX_A",
+          "value": "10.2"
+        },
+        {
+          "key": "DROP_CONTAINERY_A",
+          "value": "3.0"
+        },
+        {
+          "key": "DROP_DESCRIPTION_A",
+          "value": ""
+        },
+        {
+          "key": "DROP_EXTERNAL_STATION_ID_A",
+          "value": "T2"
+        },
+        {
+          "key": "DROP_ONLYFORK_A",
+          "value": "true"
+        },
+        {
+          "key": "MAPTHETA_A",
+          "value": "-1.57"
+        },
+        {
+          "key": "detectBeforeDrop_1",
+          "value": "false"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "TUSK_PICKUP_0003_mapping",
+      "template": "TUSK_PICKUP",
+      "actionMapping": false,
+      "conditions": {
+        "milestoneTypes": [
+          "PICKUP"
+        ],
+        "targetActions": [],
+        "agvTypes": [],
+        "usages": []
+      },
+      "entries": [
+        {
+          "key": "A",
+          "value": "0003"
+        },
+        {
+          "key": "MAPTHETA_A",
+          "value": "0"
+        },
+        {
+          "key": "PICK_AUTORETURNNODE_A",
+          "value": "true"
+        },
+        {
+          "key": "PICK_CONTAINERTHETA_A",
+          "value": "0"
+        },
+        {
+          "key": "PICK_CONTAINERTYPEID_A",
+          "value": "1"
+        },
+        {
+          "key": "PICK_CONTAINERX_A",
+          "value": "20.5"
+        },
+        {
+          "key": "PICK_CONTAINERY_A",
+          "value": "7.1"
+        },
+        {
+          "key": "PICK_DESCRIPTION_A",
+          "value": ""
+        },
+        {
+          "key": "PICK_EXTERNAL_STATION_ID_A",
+          "value": "T1"
+        },
+        {
+          "key": "PICK_ONLYFORK_A",
+          "value": "true"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "TUSK_PICKUP_0013_mapping",
+      "template": "TUSK_PICKUP",
+      "actionMapping": false,
+      "conditions": {
+        "milestoneTypes": [
+          "PICKUP"
+        ],
+        "targetActions": [],
+        "agvTypes": [],
+        "usages": []
+      },
+      "entries": [
+        {
+          "key": "A",
+          "value": "0013"
+        },
+        {
+          "key": "MAPTHETA_A",
+          "value": "-1.57"
+        },
+        {
+          "key": "PICK_AUTORETURNNODE_A",
+          "value": "true"
+        },
+        {
+          "key": "PICK_CONTAINERTHETA_A",
+          "value": "-1.57"
+        },
+        {
+          "key": "PICK_CONTAINERTYPEID_A",
+          "value": "1"
+        },
+        {
+          "key": "PICK_CONTAINERX_A",
+          "value": "10.2"
+        },
+        {
+          "key": "PICK_CONTAINERY_A",
+          "value": "3.0"
+        },
+        {
+          "key": "PICK_DESCRIPTION_A",
+          "value": ""
+        },
+        {
+          "key": "PICK_EXTERNAL_STATION_ID_A",
+          "value": "T2"
+        },
+        {
+          "key": "PICK_ONLYFORK_A",
+          "value": "true"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0000_0011_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0000"
+        },
+        {
+          "key": "B",
+          "value": "0011"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0002_0003_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0002"
+        },
+        {
+          "key": "B",
+          "value": "0003"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0002_0007_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0002"
+        },
+        {
+          "key": "B",
+          "value": "0007"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0002_0016_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0002"
+        },
+        {
+          "key": "B",
+          "value": "0016"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0003_0002_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0003"
+        },
+        {
+          "key": "B",
+          "value": "0002"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "3.14"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0004_0016_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0004"
+        },
+        {
+          "key": "B",
+          "value": "0016"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "3.14"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0005_0015_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0005"
+        },
+        {
+          "key": "B",
+          "value": "0015"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0007_0000_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0007"
+        },
+        {
+          "key": "B",
+          "value": "0000"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0011_0014_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0011"
+        },
+        {
+          "key": "B",
+          "value": "0014"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0013_0014_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0013"
+        },
+        {
+          "key": "B",
+          "value": "0014"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "3.14"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0014_0005_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0014"
+        },
+        {
+          "key": "B",
+          "value": "0005"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0014_0013_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0014"
+        },
+        {
+          "key": "B",
+          "value": "0013"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0015_0016_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0015"
+        },
+        {
+          "key": "B",
+          "value": "0016"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0016_0002_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0016"
+        },
+        {
+          "key": "B",
+          "value": "0002"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    },
+    {
+      "id": "tusk_edge_0016_0004_mapping",
+      "template": "tusk_edge",
+      "actionMapping": true,
+      "conditions": null,
+      "entries": [
+        {
+          "key": "A",
+          "value": "0016"
+        },
+        {
+          "key": "B",
+          "value": "0004"
+        },
+        {
+          "key": "MAXSPEED_AB",
+          "value": "1"
+        },
+        {
+          "key": "ORIENTATIONTYPE_AB",
+          "value": "TANGENTIAL"
+        },
+        {
+          "key": "ORIENTATION_AB",
+          "value": "0"
+        }
+      ],
+      "navigationGraphId": "tusk"
+    }
+  ]
+}
