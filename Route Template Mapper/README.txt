@@ -24,7 +24,10 @@ arm64 = Apple Silicon M1/M2/M3..., intel = older Intel Macs)
    and open it again.
 
 Your work auto-saves on this PC, so closing and re-opening the
-app keeps your last session (use "Resume last session").
+app keeps your last session (use "Resume last session"). The
+"Menu" (house) button in the top bar of the editors also takes
+you back to this start screen at any time - your work is saved
+first, so "Resume last session" brings it right back.
 
 ----------------------------------------------------------
 THE FLOW

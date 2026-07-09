@@ -2,7 +2,7 @@
   "name": "route-template-mapper",
   "productName": "Route Template Mapper",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Read a map JSON, match its navigation graphs to route templates, edit templates & mappings, and export one route-template file per graph.",
   "type": "module",
   "main": "electron/main.mjs",

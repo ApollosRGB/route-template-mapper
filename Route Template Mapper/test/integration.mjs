@@ -491,6 +491,21 @@ console.log('\n[M] Waiting spots — editor, station-group assignment, highlight
   ok('deleting a spot removes it from groups too', s.map.waitingSpots.length === 1 && !s.map.handlingStationGroups.some((g) => (g.waitingSpots || []).some((x) => x.id === 'WS_Kuka')));
 }
 
+// ============================ N) Home — back to the main menu ============================
+console.log('\n[N] Home button — back to the main menu + resume');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  ok('route view shows a Menu (home) button', !!q(w, '.app-header [data-act="home"]'));
+  click(q(w, '[data-act="mapEdit"]'), w);
+  ok('map editor shows a Menu (home) button', !!q(w, '.app-header [data-act="home"]'));
+  click(q(w, '[data-act="home"]'), w);
+  ok('Home returns to the landing screen', !!q(w, '.landing') && !!q(w, '[data-act="loadMap"]'));
+  ok('landing offers Resume last session', !!q(w, '[data-act="resume"]'));
+  click(q(w, '[data-act="resume"]'), w);
+  ok('Resume restores the session (2 graphs, kuka mappings intact)', qa(w, '.graph-pill').length === 2 && counts(w).mappings === 13, JSON.stringify(counts(w)));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

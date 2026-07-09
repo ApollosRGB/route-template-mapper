@@ -46,6 +46,7 @@
     poly: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l9 7-3.5 11h-11L3 9z"/></svg>',
     target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="2"/></svg>',
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.8 12 3l9 7.8"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>',
     link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 10a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>'
   };
@@ -581,23 +582,24 @@
 
   // -------------------------------------------------------------- persistence
   let saveTimer = null;
+  function persistNow() {
+    try {
+      const bg = state.mapEd.bg;
+      localStorage.setItem(SESSION_KEY, JSON.stringify({
+        map: state.map, mapName: state.mapName, graphs: state.graphs, gi: state.gi, deps: state.deps,
+        mapEd: { decimals: state.mapEd.decimals, ungroupedStations: state.mapEd.ungroupedStations,
+          bg: bg ? { path: bg.path, name: bg.name, metersPerPixel: bg.metersPerPixel, offsetX: bg.offsetX, offsetY: bg.offsetY, imgW: bg.imgW, imgH: bg.imgH, opacity: bg.opacity } : null }
+      }));
+      const st = $('#save-status');
+      if (st) {
+        const d = new Date();
+        st.textContent = 'Autosaved ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      }
+    } catch (e) { /* storage may be unavailable */ }
+  }
   function persist() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try {
-        const bg = state.mapEd.bg;
-        localStorage.setItem(SESSION_KEY, JSON.stringify({
-          map: state.map, mapName: state.mapName, graphs: state.graphs, gi: state.gi, deps: state.deps,
-          mapEd: { decimals: state.mapEd.decimals, ungroupedStations: state.mapEd.ungroupedStations,
-            bg: bg ? { path: bg.path, name: bg.name, metersPerPixel: bg.metersPerPixel, offsetX: bg.offsetX, offsetY: bg.offsetY, imgW: bg.imgW, imgH: bg.imgH, opacity: bg.opacity } : null }
-        }));
-        const st = $('#save-status');
-        if (st) {
-          const d = new Date();
-          st.textContent = 'Autosaved ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        }
-      } catch (e) { /* storage may be unavailable */ }
-    }, 250);
+    saveTimer = setTimeout(persistNow, 250);
   }
   function loadSession() {
     try {
@@ -783,7 +785,8 @@
         btn('sample:saveAs', I.save, 'Save as sample', 'btn-outline') +
         btn('sample:download', I.download, 'Download', 'btn-primary') +
         btn('sample:close', I.open, 'Close', 'btn-ghost')
-      : themeBtn() +
+      : btn('home', I.home, 'Menu', 'btn-ghost', 'Back to the start screen — your work is auto-saved') +
+        themeBtn() +
         btn('samples', I.box, 'Samples', 'btn-ghost', 'Check & edit sample route templates') +
         btn('loadMap', I.open, 'Load map', 'btn-ghost', 'Load a different map') +
         btn('mapEdit', I.map, 'Map edit', 'btn-ghost', 'Open the visual map editor') +
@@ -1295,6 +1298,21 @@
       case 'loadExample': loadMapData(clone(window.EXAMPLE_MAP), 'example map'); return;
       case 'resume': { const sess = loadSession(); if (sess) { state.map = normalizeMap(sess.map); state.mapName = sess.mapName || 'map'; state.graphs = sess.graphs; state.gi = sess.gi || 0; state.deps = normalizeDeps(sess.deps); state.editingSample = null; resetEditState(); if (sess.mapEd) { if (Number.isFinite(sess.mapEd.decimals)) state.mapEd.decimals = sess.mapEd.decimals; state.mapEd.ungroupedStations = Array.isArray(sess.mapEd.ungroupedStations) ? sess.mapEd.ungroupedStations : []; state.mapEd.bg = sess.mapEd.bg || null; } state.view = 'route'; state.mapEd._fitted = false; render(); } return; }
       case 'theme': toggleTheme(); return;
+      case 'home': {
+        // Back to the start screen. Work is saved first, so "Resume last session" restores it.
+        if (state.view === 'map' && state.map) reconcileGraphsAfterMapEdit();
+        clearTimeout(saveTimer); persistNow();
+        state.map = null; state.mapName = ''; state.graphs = []; state.gi = 0; state.deps = [];
+        state.editingSample = null; state.preview = false; state.samplesModal = false; state.saveDialog = false; state.exportModal = false;
+        const ed = state.mapEd;
+        ed.selset = []; ed.dialog = null; ed.areaDraft = null; ed.edgeFrom = null; ed.depSel = null; ed.depPickFrom = false; ed.wsSel = null;
+        ed.viewMenu = false; ed.translatePanel = false; ed.mode = 'select'; ed.ungroupedStations = []; ed.bg = null; ed._fitted = false; ed._dirty = false;
+        resetEditState();
+        state.view = 'landing';
+        render();
+        toast('Back at the main menu', 'Your work is saved — “Resume last session” brings it back.', 'success');
+        return;
+      }
       case 'preview': state.preview = !state.preview; render(); return;
       case 'preview:close': state.preview = false; render(); return;
       case 'copyjson': copyJSON(); return;
@@ -1702,6 +1720,7 @@
     return '<header class="app-header"><div class="brand"><div class="logo">' + I.logo + '</div>' +
       '<div class="brand-text"><h1>Map editor</h1><p>' + esc(state.mapName || 'untitled map') + '</p></div></div>' +
       '<div class="header-spacer"></div><div class="header-actions">' +
+        btn('home', I.home, 'Menu', 'btn-ghost', 'Back to the start screen — your work is auto-saved') +
         themeBtn() +
         btn('route', I.layers, 'Route templates', 'btn-ghost', 'Back to route-template editor') +
         btn('preview', I.code, 'Preview map', state.preview ? 'btn-secondary' : 'btn-ghost') +
