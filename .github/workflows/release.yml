@@ -1,0 +1,65 @@
+# Builds the Route Template Mapper for Windows and macOS whenever a v* tag
+# is pushed, and attaches the zips to that tag's GitHub release.
+# (The release itself is created first, e.g. `gh release create v1.1.0 ...`.)
+name: Release builds
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: Route Template Mapper
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Package (win32 x64)
+        run: npm run package
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path "release/Route Template Mapper-win32-x64" -DestinationPath "Route-Template-Mapper-win32-x64-${{ github.ref_name }}.zip" -CompressionLevel Optimal
+      - name: Upload to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" "Route-Template-Mapper-win32-x64-${{ github.ref_name }}.zip" --clobber --repo "${{ github.repository }}"
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      - name: Build .icns app icon from build/icon.png
+        run: |
+          mkdir -p icon.iconset
+          for s in 16 32 64 128 256 512; do
+            sips -z $s $s build/icon.png --out icon.iconset/icon_${s}x${s}.png >/dev/null
+            d=$((s * 2))
+            sips -z $d $d build/icon.png --out icon.iconset/icon_${s}x${s}@2x.png >/dev/null
+          done
+          iconutil -c icns icon.iconset -o build/icon.icns
+      - name: Package (darwin arm64 + x64)
+        run: npm run package:mac
+      - name: Zip the .app bundles (ditto preserves symlinks & permissions)
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent "release/Route Template Mapper-darwin-arm64/Route Template Mapper.app" "Route-Template-Mapper-macos-arm64-${GITHUB_REF_NAME}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "release/Route Template Mapper-darwin-x64/Route Template Mapper.app" "Route-Template-Mapper-macos-intel-${GITHUB_REF_NAME}.zip"
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" Route-Template-Mapper-macos-*.zip --clobber --repo "$GITHUB_REPOSITORY"

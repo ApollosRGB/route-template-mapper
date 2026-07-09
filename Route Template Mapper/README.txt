@@ -10,9 +10,18 @@ graph.
 ----------------------------------------------------------
 HOW TO RUN
 ----------------------------------------------------------
+WINDOWS
 1. Double-click  "Route Template Mapper.exe"  (in this folder).
 2. If Windows SmartScreen shows a blue warning (the app is not
    code-signed): click "More info"  ->  "Run anyway".
+
+MACOS (download the macos zip from the GitHub release:
+arm64 = Apple Silicon M1/M2/M3..., intel = older Intel Macs)
+1. Unzip; drag "Route Template Mapper.app" wherever you like.
+2. First launch: RIGHT-CLICK the app -> "Open" -> "Open"
+   (the app is not notarized). If macOS still refuses, run:
+   xattr -cr "/path/to/Route Template Mapper.app"
+   and open it again.
 
 Your work auto-saves on this PC, so closing and re-opening the
 app keeps your last session (use "Resume last session").

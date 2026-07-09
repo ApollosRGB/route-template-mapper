@@ -1,44 +1,49 @@
-/* ===== Theme tokens (shadcn "neutral") ===== */
+/* ===== Theme tokens — indigo/violet brand (matches the app icon) ===== */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
+  --background: 240 25% 98.5%;
+  --foreground: 234 20% 12%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
-  --muted: 0 0% 96.1%;
-  --muted-foreground: 0 0% 45.1%;
-  --primary: 0 0% 9%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96.1%;
-  --secondary-foreground: 0 0% 9%;
-  --accent: 0 0% 96.1%;
-  --accent-foreground: 0 0% 9%;
+  --card-foreground: 234 20% 12%;
+  --muted: 238 22% 94.5%;
+  --muted-foreground: 233 12% 44%;
+  --primary: 243 70% 57%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 24% 93%;
+  --secondary-foreground: 240 25% 20%;
+  --accent: 240 26% 94.5%;
+  --accent-foreground: 240 25% 16%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
-  --success: 142 71% 45%;
-  --border: 0 0% 89.8%;
-  --input: 0 0% 89.8%;
-  --ring: 0 0% 3.9%;
-  --radius: 0.5rem;
+  --success: 152 65% 40%;
+  --border: 236 18% 88%;
+  --input: 236 16% 84%;
+  --ring: 243 70% 57%;
+  --radius: 0.625rem;
+  --grad: linear-gradient(135deg, hsl(243 72% 58%), hsl(266 78% 62%));
+  --glow: 245 75% 58%;
 }
 .dark {
-  --background: 0 0% 7%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 9.5%;
-  --card-foreground: 0 0% 98%;
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 0 0% 9%;
-  --secondary: 0 0% 14.9%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 0 0% 16%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 50%;
+  --background: 233 20% 8%;
+  --foreground: 230 25% 96%;
+  --card: 233 18% 11%;
+  --card-foreground: 230 25% 96%;
+  --muted: 233 15% 16.5%;
+  --muted-foreground: 230 11% 66%;
+  --primary: 242 82% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 233 15% 17%;
+  --secondary-foreground: 230 25% 96%;
+  --accent: 234 16% 18%;
+  --accent-foreground: 230 25% 96%;
+  --destructive: 0 66% 55%;
   --destructive-foreground: 0 0% 98%;
-  --success: 142 65% 47%;
-  --border: 0 0% 16%;
-  --input: 0 0% 20%;
-  --ring: 0 0% 83.1%;
+  --success: 152 60% 48%;
+  --border: 233 14% 19.5%;
+  --input: 233 13% 24%;
+  --ring: 242 82% 67%;
+  --radius: 0.625rem;
+  --grad: linear-gradient(135deg, hsl(243 76% 62%), hsl(266 80% 66%));
+  --glow: 245 85% 65%;
 }
 
 * { box-sizing: border-box; }
@@ -597,3 +602,94 @@ input.invalid:focus { border-color: hsl(var(--destructive)); box-shadow: 0 0 0 2
 .map-toolbar .mt-graph { width: 170px; height: 38px; font-size: 13px; }
 .map-toolbar .mt-check { font-size: 13.5px; }
 .map-toolbar .mt-check input { width: 16px; height: 16px; }
+
+/* ============================================================
+   Design refresh v1.1 — gradients, depth, glass panels, pills
+   (visual layer only: no selectors/markup changed)
+   ============================================================ */
+body { font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; }
+h1, h2, h3 { letter-spacing: -0.01em; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / .28); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / .5); border: 2px solid transparent; background-clip: content-box; }
+
+/* --- header & brand --- */
+.app-header { padding: 12px 22px; background: linear-gradient(to bottom, hsl(var(--card)), hsl(var(--card) / .92)); }
+.brand .logo {
+  width: 38px; height: 38px; border-radius: 11px;
+  background: var(--grad); color: #fff;
+  box-shadow: 0 4px 16px hsl(var(--glow) / .38), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.brand .logo svg { width: 22px; height: 22px; }
+.brand-text h1 { font-size: 15.5px; }
+
+/* --- buttons --- */
+.btn { border-radius: 10px; transition: background .13s, color .13s, border-color .13s, box-shadow .13s, transform .08s, filter .13s; }
+.btn-primary { background: var(--grad); border: none; color: #fff; box-shadow: 0 2px 10px hsl(var(--glow) / .35), inset 0 1px 0 rgba(255,255,255,.22); }
+.btn-primary:hover:not(:disabled) { background: var(--grad); filter: brightness(1.09); box-shadow: 0 4px 16px hsl(var(--glow) / .45), inset 0 1px 0 rgba(255,255,255,.22); }
+.btn-secondary { background: hsl(var(--primary) / .13); color: hsl(var(--primary)); }
+.btn-secondary:hover:not(:disabled) { background: hsl(var(--primary) / .2); }
+.dark .btn-secondary { color: hsl(240 90% 80%); }
+.btn-outline:hover:not(:disabled) { border-color: hsl(var(--primary) / .45); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
+/* --- tabs → pills --- */
+.tabs-bar { padding: 10px 20px; gap: 6px; }
+.tab { border: 1px solid transparent; border-radius: 999px; padding: 7px 15px; margin-bottom: 0; transition: background .13s, color .13s, border-color .13s; }
+.tab:hover { background: hsl(var(--accent)); }
+.tab.active { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); border-color: hsl(var(--primary) / .32); }
+.dark .tab.active { color: hsl(240 92% 82%); }
+.tab.active .count { background: hsl(var(--primary)); color: #fff; }
+
+/* --- cards, rows, inputs --- */
+.card { border-radius: 14px; box-shadow: 0 1px 3px rgba(16, 18, 45, .05); }
+.card-head { background: hsl(var(--muted) / .35); border-radius: 14px 14px 0 0; }
+.row { border-radius: 10px; }
+.subsection { border-radius: 12px; }
+input[type="text"], input[type="number"], select, textarea { border-radius: 9px; transition: border-color .13s, box-shadow .13s; }
+input:focus, select:focus, textarea:focus { border-color: hsl(var(--ring) / .8); box-shadow: 0 0 0 3px hsl(var(--ring) / .18); }
+
+/* --- sidebar & lists --- */
+.list-item { border-radius: 10px; }
+.list-item.active { background: hsl(var(--primary) / .09); border-color: hsl(var(--primary) / .32); }
+.sample-item { border-radius: 12px; }
+.sample-item:hover { border-color: hsl(var(--primary) / .5); box-shadow: 0 2px 12px hsl(var(--glow) / .12); }
+.stat { border-radius: 12px; }
+
+/* --- graph pills --- */
+.graph-pill { border-radius: 11px; padding: 7px 13px; }
+.graph-pill.active { border-color: hsl(var(--primary) / .55); background: hsl(var(--primary) / .09); box-shadow: 0 0 0 1px hsl(var(--primary) / .35) inset, 0 2px 10px hsl(var(--glow) / .14); }
+
+/* --- landing hero --- */
+.landing { background: radial-gradient(900px 460px at 50% -8%, hsl(var(--glow) / .13), transparent 65%); }
+.landing-card { border-radius: 22px; padding: 44px 42px; box-shadow: 0 26px 80px rgba(16, 18, 45, .12); }
+.dark .landing-card { box-shadow: 0 26px 80px rgba(0,0,0,.45); }
+.landing-icon {
+  width: 76px; height: 76px; border-radius: 22px; margin-bottom: 18px;
+  background: var(--grad); color: #fff;
+  box-shadow: 0 12px 34px hsl(var(--glow) / .42), inset 0 1px 0 rgba(255,255,255,.28);
+}
+.landing-icon svg { width: 38px; height: 38px; }
+.landing-card h2 { font-size: 24px; letter-spacing: -0.02em; }
+
+/* --- modals, toasts, dropdowns --- */
+.modal-overlay { background: hsl(233 30% 6% / .55); backdrop-filter: blur(4px); }
+.modal { border-radius: 16px; box-shadow: 0 28px 90px rgba(0,0,0,.4); }
+.toast { border-radius: 12px; box-shadow: 0 10px 34px rgba(0,0,0,.2); backdrop-filter: blur(8px); background: hsl(var(--card) / .92); }
+.mt-menu { border-radius: 14px; backdrop-filter: blur(12px); background: hsl(var(--card) / .9); box-shadow: 0 14px 44px rgba(0,0,0,.24); }
+
+/* --- map editor chrome: glass floating panels --- */
+.map-info, .map-readout, .map-translate, .map-side {
+  backdrop-filter: blur(12px); background: hsl(var(--card) / .86);
+  border-radius: 13px; box-shadow: 0 10px 32px rgba(10, 12, 35, .18);
+}
+.map-toolbar { background: linear-gradient(to bottom, hsl(var(--card)), hsl(var(--card) / .94)); }
+.map-toolbar .mt-tool { border-radius: 12px; }
+.map-toolbar .mt-tool.btn-secondary,
+.map-toolbar .mt-tool.btn-secondary:hover:not(:disabled) {
+  background: var(--grad); color: #fff;
+  box-shadow: 0 3px 12px hsl(var(--glow) / .42), inset 0 1px 0 rgba(255,255,255,.22);
+}
+.side-item { border-radius: 11px; }
+.footer-hint, .app-footer { font-size: 12px; }
