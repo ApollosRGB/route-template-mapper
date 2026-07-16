@@ -506,6 +506,59 @@ console.log('\n[N] Home button — back to the main menu + resume');
   ok('Resume restores the session (2 graphs, kuka mappings intact)', qa(w, '.graph-pill').length === 2 && counts(w).mappings === 13, JSON.stringify(counts(w)));
 }
 
+// ============================ O) Overlapping nodes — disambiguation picker ============================
+console.log('\n[O] Overlapping nodes — picker to choose which node to select/edit');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  click(q(w, '[data-act="mapEdit"]'), w);
+  const api = w.__rtm, s = api.state;
+  const KUKA = 'KMP 400P-1-5G diffDrive';
+
+  // move tusk node 0011 exactly onto kuka node 1 (in the shared map frame)
+  const kuka = s.map.navigationGraphs.find((g) => g.id === KUKA);
+  const tusk = s.map.navigationGraphs.find((g) => g.id === 'tusk');
+  const n1 = kuka.nodes.find((n) => n.id === '1');
+  const p = api.g2m(kuka, n1.graphX, n1.graphY);
+  const loc = api.m2g(tusk, p.x, p.y);
+  const t11 = tusk.nodes.find((n) => n.id === '0011');
+  t11.graphX = loc.x; t11.graphY = loc.y;
+  w.document.defaultView.dispatchEvent(new w.Event('resize')); // repaint
+
+  ok('overlapCandidates finds both nodes within 0.1 m', api.overlapCandidates(KUKA, '1').length === 2, JSON.stringify(api.overlapCandidates(KUKA, '1')));
+  ok('active graph listed first', api.overlapCandidates(KUKA, '1')[0].graphId === KUKA);
+
+  // clicking the shared spot opens the picker instead of silently picking one
+  const el = q(w, 'circle[data-mt="node"][data-mid="1"][data-mg="' + KUKA + '"]');
+  el.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('overlap picker opens with 2 entries', !!q(w, '#map-overlap') && qa(w, '#map-overlap .ov-item').length === 2, qa(w, '#map-overlap .ov-item').length + '');
+  ok('no drag started (nothing moved by accident)', !s.mapEd.drag);
+
+  // pick the tusk node from the panel
+  click(qa(w, '[data-act="ovSelect"]').find((x) => x.dataset.g === 'tusk'), w);
+  ok('choosing an entry selects that node', s.mapEd.selset.length === 1 && s.mapEd.selset[0].graphId === 'tusk' && s.mapEd.selset[0].id === '0011', JSON.stringify(s.mapEd.selset));
+
+  // clicking the shared spot again now drags the CHOSEN node, not the top one
+  const el2 = q(w, 'circle[data-mt="node"][data-mid="1"][data-mg="' + KUKA + '"]');
+  el2.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  ok('re-click grabs the chosen (tusk) node for dragging', s.mapEd.drag && s.mapEd.drag.kind === 'move' && s.mapEd.drag.items.length === 1 && s.mapEd.drag.items[0].r.n === t11);
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+
+  // the pencil button opens the edit dialog for exactly that node
+  click(qa(w, '[data-act="ovEdit"]').find((x) => x.dataset.g === 'tusk'), w);
+  ok('edit opens the dialog for the chosen node', s.mapEd.dialog && s.mapEd.dialog.kind === 'node' && s.mapEd.dialog.graphId === 'tusk' && s.mapEd.dialog.id === '0011', JSON.stringify(s.mapEd.dialog));
+  ok('picking an editor closes the picker', !s.mapEd.overlap);
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok('Escape closes the dialog', !s.mapEd.dialog);
+
+  // single (non-overlapping) nodes never show the picker
+  const el3 = q(w, 'circle[data-mt="node"][data-mid="13"][data-mg="' + KUKA + '"]');
+  el3.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('normal nodes select directly without a picker', !q(w, '#map-overlap') && s.mapEd.selset[0] && s.mapEd.selset[0].id === '13');
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

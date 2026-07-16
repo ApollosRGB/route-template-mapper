@@ -693,3 +693,22 @@ input:focus, select:focus, textarea:focus { border-color: hsl(var(--ring) / .8);
 }
 .side-item { border-radius: 11px; }
 .footer-hint, .app-footer { font-size: 12px; }
+
+/* ===== Overlapping-nodes picker (right side, next to the info box) ===== */
+.map-overlap {
+  position: absolute; top: 12px; right: 206px; width: 252px; max-height: calc(100% - 60px); overflow: auto;
+  backdrop-filter: blur(12px); background: hsl(var(--card) / .88);
+  border: 1px solid hsl(var(--border)); border-radius: 13px;
+  padding: 10px 12px; box-shadow: 0 10px 32px rgba(10, 12, 35, .18); z-index: 7; font-size: 12px;
+}
+.ov-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 9px;
+  border: 1px solid hsl(var(--border)); border-radius: 10px; cursor: pointer;
+  background: hsl(var(--background)); margin-bottom: 6px;
+}
+.ov-item:last-child { margin-bottom: 0; }
+.ov-item:hover { border-color: hsl(var(--primary) / .5); }
+.ov-item.active { border-color: hsl(var(--primary) / .6); background: hsl(var(--primary) / .09); }
+.ov-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ov-main b { font-size: 12.5px; }
+.ov-main span { font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

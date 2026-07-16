@@ -98,6 +98,11 @@ back (your existing template work is kept where graphs still match).
     * With several selected: drag any one to move them all together,
       or press Delete (or the info-box "Delete N") to remove them all.
     * Double-click an object to open its edit dialog.
+    * OVERLAPPING NODES: if several nodes (same or different graph)
+      sit on the same spot (within 0.1 m), clicking them opens a
+      small picker on the right listing all of them - click the one
+      you mean (dragging then moves that one), or use its pencil
+      button to edit it directly.
     * ACCESS NODES: pick the Station tool, select a station, then
       left-click nodes to add/remove them as that station's access
       nodes (a green dashed line + ring marks each one; the station

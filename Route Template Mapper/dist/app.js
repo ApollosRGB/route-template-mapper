@@ -97,6 +97,7 @@
       depPickFrom: false, // next node click sets the active dependency's first node
       wsSel: null,       // active waiting-spot index (waiting tool)
       viewMenu: false,   // View dropdown (grid/coords/decimals/background) open
+      overlap: null,     // { items: [{graphId,nodeId,dist}] } — picker for nodes sharing one spot
       ungroupedStations: [],
       bg: null,          // { path, name, dataUrl, metersPerPixel, offsetX, offsetY, imgW, imgH, opacity }
       drag: null,        // transient drag state
@@ -1306,7 +1307,7 @@
         state.editingSample = null; state.preview = false; state.samplesModal = false; state.saveDialog = false; state.exportModal = false;
         const ed = state.mapEd;
         ed.selset = []; ed.dialog = null; ed.areaDraft = null; ed.edgeFrom = null; ed.depSel = null; ed.depPickFrom = false; ed.wsSel = null;
-        ed.viewMenu = false; ed.translatePanel = false; ed.mode = 'select'; ed.ungroupedStations = []; ed.bg = null; ed._fitted = false; ed._dirty = false;
+        ed.viewMenu = false; ed.translatePanel = false; ed.overlap = null; ed.mode = 'select'; ed.ungroupedStations = []; ed.bg = null; ed._fitted = false; ed._dirty = false;
         resetEditState();
         state.view = 'landing';
         render();
@@ -1318,15 +1319,15 @@
       case 'copyjson': copyJSON(); return;
 
       // ---- map editor: entry / navigation ----
-      case 'newMap': { state.map = normalizeMap(emptyMap()); state.map.navigationGraphs.push(newGraph('graph1')); state.mapName = 'untitled map'; state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null; state.mapEd.gi = 0; state.mapEd.selset = []; state.mapEd.mode = 'select'; state.mapEd.ungroupedStations = []; state.mapEd.bg = null; state.mapEd._fitted = false; state.mapEd._dirty = true; state.preview = false; reconcileGraphsAfterMapEdit(); state.view = 'map'; persist(); render(); return; }
+      case 'newMap': { state.map = normalizeMap(emptyMap()); state.map.navigationGraphs.push(newGraph('graph1')); state.mapName = 'untitled map'; state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null; state.mapEd.overlap = null; state.mapEd.gi = 0; state.mapEd.selset = []; state.mapEd.mode = 'select'; state.mapEd.ungroupedStations = []; state.mapEd.bg = null; state.mapEd._fitted = false; state.mapEd._dirty = true; state.preview = false; reconcileGraphsAfterMapEdit(); state.view = 'map'; persist(); render(); return; }
       case 'mapEdit': { if (!state.map) { toast('No map', 'Load or create a map first.', 'error'); return; } collectUngrouped(); state.mapEd._fitted = false; state.preview = false; state.view = 'map'; render(); return; }
       case 'route': { if (state.map) { const r = reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { toast('Map applied', r.kept + ' graph(s) kept · ' + r.added + ' new', 'success'); state.mapEd._dirty = false; } } state.preview = false; state.view = 'route'; render(); return; }
       case 'copyMapJson': { const j = JSON.stringify(canonicalizeMap(state.map), null, 2); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(j).then(() => toast('Copied', '', 'success'), () => {}); return; }
 
       // ---- map editor: tools ----
       case 'mapMode': { const m2 = ctx.el.dataset.mode; state.mapEd.mode = (state.mapEd.mode === m2 && m2 !== 'select') ? 'select' : m2; // clicking the active tool again toggles back to Select (closes its panel)
-        state.mapEd.edgeFrom = null; state.mapEd.depPickFrom = false; if (state.mapEd.mode !== 'area' && state.mapEd.mode !== 'earea') state.mapEd.areaDraft = null; render(); return; }
-      case 'mapGraphSel': { state.mapEd.gi = +ctx.el.value || 0; state.mapEd.selset = []; state.mapEd.edgeFrom = null; render(); return; }
+        state.mapEd.edgeFrom = null; state.mapEd.depPickFrom = false; state.mapEd.overlap = null; if (state.mapEd.mode !== 'area' && state.mapEd.mode !== 'earea') state.mapEd.areaDraft = null; render(); return; }
+      case 'mapGraphSel': { state.mapEd.gi = +ctx.el.value || 0; state.mapEd.selset = []; state.mapEd.edgeFrom = null; state.mapEd.overlap = null; render(); return; }
       case 'graphAdd': { const used = new Set(state.map.navigationGraphs.map((g) => g.id)); let i = 1, id; do { id = 'graph' + i; i++; } while (used.has(id)); state.map.navigationGraphs.push(newGraph(id)); state.mapEd.gi = state.map.navigationGraphs.length - 1; state.mapEd.dialog = { kind: 'graph', id }; mapDirty(); persist(); render(); return; }
       case 'graphRemove': { const g = mapGraph(); if (!g) return; if (!confirm('Remove graph "' + g.id + '" with its nodes and edges?')) return; cleanAccessNodes(g.id); state.map.navigationGraphs.splice(state.mapEd.gi, 1); if (state.mapEd.gi >= state.map.navigationGraphs.length) state.mapEd.gi = Math.max(0, state.map.navigationGraphs.length - 1); state.mapEd.selset = []; mapDirty(); persist(); render(); return; }
       case 'graphTranslate': { if (mapGraph()) { state.mapEd.translatePanel = !state.mapEd.translatePanel; render(); } return; }
@@ -1337,8 +1338,13 @@
       case 'decimals': { state.mapEd.decimals = Math.max(0, Math.min(6, parseInt(ctx.el.value, 10) || 0)); persist(); const box = document.getElementById('map-info'); if (box) box.innerHTML = mapInfoInner(); return; }
       case 'gridToggle': { state.mapEd.grid = !!ctx.el.checked; paintCanvas(); return; }
       case 'coordsToggle': { state.mapEd.coords = !!ctx.el.checked; paintCanvas(); return; }
-      case 'mapClearSel': { state.mapEd.selset = []; paintAndInfo(); return; }
+      case 'mapClearSel': { state.mapEd.selset = []; state.mapEd.overlap = null; render(); return; }
       case 'viewMenu': { state.mapEd.viewMenu = !state.mapEd.viewMenu; render(); return; }
+
+      // ---- overlapping-nodes picker ----
+      case 'ovSelect': { setSel({ type: 'node', id: ctx.el.dataset.n, graphId: ctx.el.dataset.g }); render(); return; }
+      case 'ovEdit': { state.mapEd.overlap = null; openMapDialogFor({ type: 'node', id: ctx.el.dataset.n, graphId: ctx.el.dataset.g }); return; }
+      case 'ovClose': { state.mapEd.overlap = null; render(); return; }
       case 'resetView': { const svg = document.getElementById('map-svg'); const st = svg ? svg.parentElement : null; fitView(st ? st.clientWidth : 800, st ? st.clientHeight : 600); paintCanvas(); return; }
       case 'mapEditSel': { const o = selOne(); if (o) openMapDialogFor(o); return; }
       case 'mapDeleteSel': deleteMapSelection(); return;
@@ -1535,7 +1541,7 @@
   function loadMapData(map, name) {
     if (!map || !Array.isArray(map.navigationGraphs)) { toast('Not a map', 'This file has no "navigationGraphs".', 'error'); return; }
     state.map = normalizeMap(map); state.mapName = name || 'map'; state.graphs = graphsFromMap(state.map); state.gi = 0; state.editingSample = null; resetEditState();
-    state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null;
+    state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null; state.mapEd.overlap = null;
     state.view = 'route'; state.mapEd.gi = 0; state.mapEd.selset = []; state.mapEd.dialog = null; state.mapEd.ungroupedStations = []; state.mapEd.bg = null; state.mapEd._fitted = false; state.mapEd._dirty = false;
     persist(); render();
     const matched = state.graphs.filter((g) => g.matched).length;
@@ -1646,8 +1652,23 @@
       '<div id="map-xh-v" class="map-xh map-xh-v"></div><div id="map-xh-h" class="map-xh map-xh-h"></div>' +
       (state.mapEd.translatePanel ? translatePanelHTML() : '') +
       (side ? '<div id="map-side" class="map-side">' + side + '</div>' : '') +
+      (state.mapEd.overlap ? '<div id="map-overlap" class="map-overlap">' + overlapPanelHTML() + '</div>' : '') +
       '<div id="map-info" class="map-info">' + mapInfoInner() + '</div>' +
       '<div id="map-readout" class="map-readout">x —   y —</div></div>';
+  }
+  // Picker shown when several nodes share (≈) one position — choose which one you mean.
+  function overlapPanelHTML() {
+    const ov = state.mapEd.overlap; if (!ov) return '';
+    const rows = ov.items.map((c) =>
+      '<div class="ov-item' + (isSel('node', c.nodeId, c.graphId) ? ' active' : '') + '" data-act="ovSelect" data-g="' + esc(c.graphId) + '" data-n="' + esc(c.nodeId) + '">' +
+        '<span class="li-dot node"></span>' +
+        '<div class="ov-main"><b class="mono">' + esc(c.nodeId) + '</b><span class="muted">' + esc(c.graphId) + '</span></div>' +
+        '<button class="btn btn-ghost btn-icon btn-sm" data-act="ovEdit" data-g="' + esc(c.graphId) + '" data-n="' + esc(c.nodeId) + '" title="Edit this node">' + I.wand + '</button>' +
+      '</div>').join('');
+    return '<div class="side-head">' + I.node + '<b>' + ov.items.length + ' nodes at this spot</b>' +
+        '<button class="btn btn-ghost btn-icon btn-sm" data-act="ovClose" title="Close">✕</button></div>' +
+      '<div class="side-hint muted">These nodes overlap (within 0.1 m). Click one to select it — drag on the map then moves it — or use ' + I.wand + ' to edit it directly.</div>' +
+      '<div class="side-list">' + rows + '</div>';
   }
   // ---- docked side panel: reservation dependencies (deps tool) ----
   function depsPanelHTML() {
@@ -2186,6 +2207,22 @@
     return null;
   }
   function nodeMapPos(graphId, nodeId) { const g = (state.map.navigationGraphs || []).find((x) => x.id === graphId); if (!g) return null; const n = nodeById(g, nodeId); return n ? g2m(g, n.graphX, n.graphY) : null; }
+  // All nodes (any graph) within `radius` metres of the given node's map position — active graph first, then nearest.
+  // Default radius: 0.1 m, but never more than ~12 px at the current zoom, so nodes that are
+  // clearly separate on screen (high zoom) don't trigger the picker.
+  function overlapCandidates(graphId, nodeId, radius) {
+    const r = radius == null ? Math.min(0.1, 12 / ((state.mapEd.view && state.mapEd.view.zoom) || 30)) : radius;
+    const p0 = nodeMapPos(graphId, nodeId); if (!p0) return [];
+    const out = [];
+    (state.map.navigationGraphs || []).forEach((g) => (g.nodes || []).forEach((n) => {
+      const p = g2m(g, n.graphX, n.graphY);
+      const d = Math.hypot(p.x - p0.x, p.y - p0.y);
+      if (d <= r) out.push({ graphId: g.id, nodeId: n.id, dist: d });
+    }));
+    const ag = (mapGraph() || {}).id;
+    out.sort((a, b) => ((b.graphId === ag) - (a.graphId === ag)) || (a.dist - b.dist));
+    return out;
+  }
   function accessTarget(sel) {
     if (!sel) return null;
     if (sel.type === 'station') { const f = allStations().find((x) => x.st.id === sel.id); return f ? f.st : null; }
@@ -2255,13 +2292,27 @@
       // assign access nodes by clicking — only while the matching tool (Station/Charger) is active
       const oneSel = selOne();
       if (hit.type === 'node' && oneSel && (oneSel.type === 'station' || oneSel.type === 'charger') && ed.mode === oneSel.type) { toggleAccessNode(oneSel, hit.graphId, hit.id); persist(); mapDirty(); paintAndInfo(); return; }
+      // several nodes on one spot → open the picker instead of guessing; if one of them
+      // is already selected (picked from the panel), treat the click as that node so dragging works
+      if (hit.type === 'node') {
+        const cands = overlapCandidates(hit.graphId, hit.id);
+        if (cands.length > 1) {
+          const selCand = cands.find((c) => isSel('node', c.nodeId, c.graphId));
+          if (!selCand) {
+            ed.overlap = { items: cands };
+            setSel({ type: 'node', id: cands[0].nodeId, graphId: cands[0].graphId });
+            ed.drag = null; render(); return;
+          }
+          obj.id = selCand.nodeId; obj.graphId = selCand.graphId;
+        }
+      }
       if (!isSelObj(obj)) setSel(obj);
       const startMouse = s2w(pt.x, pt.y);
       const items = (ed.selset || []).map(movableRef).filter(Boolean).map((r) => { let sx, sy; if (r.kind === 'node') { const p = g2m(r.g, r.n.graphX, r.n.graphY); sx = p.x; sy = p.y; } else { sx = r.el.mapX; sy = r.el.mapY; } return { r, sx, sy }; });
       ed.drag = items.length ? { kind: 'move', items, startMouse, moved: false } : null;
       paintAndInfo();
     } else if (e.shiftKey) { ed.drag = { kind: 'marquee', x0: pt.x, y0: pt.y, add: true }; ed.marquee = { minX: pt.x, minY: pt.y, maxX: pt.x, maxY: pt.y }; }
-    else { setSel(null); ed.drag = { kind: 'pan', sx: pt.x, sy: pt.y, vx: ed.view.x, vy: ed.view.y }; paintAndInfo(); }
+    else { setSel(null); ed.drag = { kind: 'pan', sx: pt.x, sy: pt.y, vx: ed.view.x, vy: ed.view.y }; if (ed.overlap) { ed.overlap = null; render(); } else paintAndInfo(); }
   }
   function onCanvasMove(e) {
     const ed = state.mapEd, d = ed.drag; if (!d) return; const pt = svgPoint(e);
@@ -2299,7 +2350,18 @@
   function onCanvasDblClick(e) {
     const ed = state.mapEd;
     if ((ed.mode === 'area' || ed.mode === 'earea') && ed.areaDraft && ed.areaDraft.length >= 3) { finishArea(); return; }
-    const hit = hitTarget(e); if (hit) openMapDialogFor(hit);
+    const hit = hitTarget(e); if (!hit) return;
+    if (hit.type === 'node') {
+      const cands = overlapCandidates(hit.graphId, hit.id);
+      if (cands.length > 1) {
+        // edit the candidate the user picked (selected); otherwise show the picker first
+        const selCand = cands.find((c) => isSel('node', c.nodeId, c.graphId));
+        if (selCand) openMapDialogFor({ type: 'node', id: selCand.nodeId, graphId: selCand.graphId });
+        else { ed.overlap = { items: cands }; setSel({ type: 'node', id: cands[0].nodeId, graphId: cands[0].graphId }); render(); }
+        return;
+      }
+    }
+    openMapDialogFor(hit);
   }
 
   // ---- map mutations ----
@@ -2361,7 +2423,7 @@
     const sels = (state.mapEd.selset || []).slice(); if (!sels.length) return;
     if (sels.length > 1 && !confirm('Delete ' + sels.length + ' selected objects?')) return;
     sels.forEach(deleteOne);
-    state.mapEd.selset = []; persist(); mapDirty(); render();
+    state.mapEd.selset = []; state.mapEd.overlap = null; persist(); mapDirty(); render();
   }
   function openMapDialogFor(hit) {
     const ed = state.mapEd; setSel({ type: hit.type, id: hit.id, graphId: hit.graphId });
@@ -2432,7 +2494,7 @@
       else if (e.key === 'Escape') {
         if (state.mapEd.dialog) { state.mapEd.dialog = null; render(); }
         else if (state.mapEd.viewMenu || state.mapEd.translatePanel) { state.mapEd.viewMenu = false; state.mapEd.translatePanel = false; render(); }
-        else if (state.view === 'map' && (state.mapEd.edgeFrom || state.mapEd.areaDraft || state.mapEd.depPickFrom)) { state.mapEd.edgeFrom = null; state.mapEd.areaDraft = null; state.mapEd.depPickFrom = false; render(); }
+        else if (state.view === 'map' && (state.mapEd.edgeFrom || state.mapEd.areaDraft || state.mapEd.depPickFrom || state.mapEd.overlap)) { state.mapEd.edgeFrom = null; state.mapEd.areaDraft = null; state.mapEd.depPickFrom = false; state.mapEd.overlap = null; render(); }
         else if (state.samplesModal || state.saveDialog || state.exportModal || (state.view === 'map' && state.preview)) { state.samplesModal = false; state.saveDialog = false; state.exportModal = false; if (state.view === 'map') state.preview = false; render(); }
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && state.view === 'map' && !state.mapEd.dialog && state.mapEd.selset.length && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); deleteMapSelection(); }
     });
@@ -2440,7 +2502,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, nodeMapPos };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
