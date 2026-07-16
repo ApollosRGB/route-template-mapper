@@ -93,8 +93,11 @@ THE FLOW
 5. EXPORT
    "Export" opens a checklist: the full map (.json), the
    reservation dependencies (their own .json), plus one
-   route-template file per navigation graph. Tick what you want,
-   choose ONE folder, and it writes them all:
+   route-template file per navigation graph. A MAP NAME field at
+   the top lets you name the map before saving (it is written
+   into the map JSON's "name" and used for the file name - no
+   more "untitled_map"). Tick what you want, choose ONE folder,
+   and it writes them all:
        <map>_map_<date>.json
        reservation_dependencies_<date>_<time>.json
        <graphId>_route_templates_<date>.json
@@ -131,6 +134,8 @@ back (your existing template work is kept where graphs still match).
       of them with their type. Click the one you mean (dragging
       then moves that one), or use its pencil button to edit it
       directly. Nothing is dragged by accident on that first click.
+      The picker closes by itself when you select or edit an
+      object that is not one of its listed candidates.
       The node tools also SEE THROUGH cover: with the Edge,
       Dependencies or Waiting tool (or when assigning access
       nodes), clicking a station/charger/light that covers a node

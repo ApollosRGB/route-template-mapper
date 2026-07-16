@@ -828,6 +828,61 @@ console.log('\n[T] Station size — editable length/width and a real-size footpr
   ok('edited size reaches the exported map JSON', k1x.length === 3 && k1x.width === 1.5 && k1x.height === 5, JSON.stringify({ l: k1x.length, w: k1x.width, h: k1x.height }));
 }
 
+// ============================ U) v1.6: map naming + overlap picker auto-close ============================
+console.log('\n[U] Map name before saving · picker closes when picking an outside object');
+{
+  const w = await boot();
+  click(q(w, '[data-act="newMap"]'), w); // starts as "untitled map"
+  const api = w.__rtm, s = api.state;
+
+  // --- name the map in the export dialog ---
+  click(q(w, '.app-header [data-act="exportAll"]'), w);
+  const nameInp = q(w, '#export-mapname');
+  ok('export dialog offers a map-name field', !!nameInp && nameInp.value === 'untitled map', nameInp && nameInp.value);
+  nameInp.value = 'Hall 3 Layout';
+  nameInp.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok('name is applied to the session and the map JSON', s.mapName === 'Hall 3 Layout' && s.map.name === 'Hall 3 Layout');
+  ok('map file name uses the new name', /Hall_3_Layout_map_\d{4}-\d{2}-\d{2}\.json/.test(q(w, '.sample-list').textContent), q(w, '.sample-list').textContent.slice(0, 120));
+  ok('exported JSON carries the name', api.canonicalizeMap(s.map).name === 'Hall 3 Layout');
+  click(q(w, '[data-act="export:close"]'), w);
+}
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  click(q(w, '[data-act="mapEdit"]'), w);
+  const api = w.__rtm, s = api.state;
+  const KUKA = 'KMP 400P-1-5G diffDrive';
+
+  // cover node 13 with station K1 → open the picker
+  const kuka = s.map.navigationGraphs.find((g) => g.id === KUKA);
+  const k1 = api.allStations().find((x) => x.st.id === 'K1').st;
+  const n13 = kuka.nodes.find((n) => n.id === '13');
+  const p13 = api.g2m(kuka, n13.graphX, n13.graphY);
+  k1.mapX = p13.x; k1.mapY = p13.y;
+  w.document.defaultView.dispatchEvent(new w.Event('resize'));
+  q(w, 'rect[data-mt="station"][data-mid="K1"]').dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('picker opens for the covered spot', !!q(w, '#map-overlap'));
+
+  // clicking one of the PICKER'S OWN candidates on the map keeps it open
+  q(w, 'rect[data-mt="station"][data-mid="K1"]').dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('clicking a candidate of the picker keeps it open', !!q(w, '#map-overlap'));
+
+  // selecting a DIFFERENT object on the map closes it
+  q(w, 'circle[data-mt="node"][data-mid="2"][data-mg="' + KUKA + '"]').dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('picking an outside object closes the picker', !q(w, '#map-overlap') && s.mapEd.selset[0].id === '2', JSON.stringify(s.mapEd.selset));
+
+  // same when EDITING (double-click) a different object
+  q(w, 'rect[data-mt="station"][data-mid="K1"]').dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('picker re-opens on the covered spot', !!q(w, '#map-overlap'));
+  q(w, 'rect[data-mt="station"][data-mid="K2"]').dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true }));
+  ok('double-click-editing an outside object closes the picker', !q(w, '#map-overlap') && s.mapEd.dialog && s.mapEd.dialog.id === 'K2', JSON.stringify(s.mapEd.dialog));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

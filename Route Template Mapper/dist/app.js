@@ -1375,9 +1375,12 @@
       '<div class="sample-main"><div class="sample-name">Reservation dependencies</div>' +
       '<div class="sample-sub">' + state.deps.length + ' dependenc' + (state.deps.length === 1 ? 'y' : 'ies') + ' → ' + esc(depsFileName()) + '</div></div>' + I.link + '</div>' : '';
     const n = state.exportSel.size + (state.map && state.exportMap ? 1 : 0) + (state.deps.length && state.exportDeps ? 1 : 0);
+    const nameRow = state.map ? '<div class="field" style="margin-bottom:12px;"><label>Map name (used in the map JSON and its file name)</label>' +
+      '<input id="export-mapname" type="text" data-act="export:name" value="' + esc(String(state.mapName || '').replace(/\.json$/i, '')) + '" placeholder="e.g. hall-3-layout" /></div>' : '';
     return '<div class="modal-overlay" data-act="export:close"><div class="modal" data-stop style="width:min(600px,100%);">' +
       '<div class="modal-head"><h3>Export</h3><button class="btn btn-ghost btn-icon" data-act="export:close" title="Close">✕</button></div>' +
       '<div class="modal-body" style="padding:14px 18px;"><div class="muted" style="font-size:12px;margin-bottom:10px;">Pick what to export. Each item becomes one file, written into the folder you choose next.</div>' +
+        nameRow +
         '<div class="sample-list">' + mapRow + depsRow + rows + '</div></div>' +
       '<div class="modal-foot"><button class="btn btn-ghost" data-act="export:close">Cancel</button>' +
         '<button class="btn btn-primary" data-act="export:confirm"' + (n ? '' : ' disabled') + '>' + I.download + '<span>Export ' + n + ' file' + (n === 1 ? '' : 's') + '</span></button></div></div></div>';
@@ -1530,6 +1533,7 @@
       case 'export:toggle': { if (state.exportSel.has(i)) state.exportSel.delete(i); else state.exportSel.add(i); render(); return; }
       case 'export:map': { state.exportMap = !state.exportMap; render(); return; }
       case 'export:deps': { state.exportDeps = !state.exportDeps; render(); return; }
+      case 'export:name': { const v = ctx.el.value.trim(); if (!v || (v === state.mapName && (!state.map || state.map.name === v))) return; state.mapName = v; if (state.map) state.map.name = v; persist(); render(); return; }
       case 'export:confirm': doExportSelected(); return;
       case 'export:close': state.exportModal = false; render(); return;
 
@@ -2377,6 +2381,9 @@
   // The node a click "means" for node-oriented tools (edge / dependencies / waiting / access):
   // the hit node itself, or — when the click lands on a station/charger/light drawn over a
   // node — the nearest node overlapping that element. Optionally restricted to one graph.
+  function overlapHasItem(ov, o) {
+    return (ov.items || []).some((c) => c.type === o.type && c.id === o.id && ((c.graphId || undefined) === (o.graphId || undefined)));
+  }
   function nodeFromHit(hit, activeGraphId) {
     if (!hit) return null;
     if (hit.type === 'node') return (!activeGraphId || hit.graphId === activeGraphId) ? { graphId: hit.graphId, nodeId: hit.id } : null;
@@ -2474,10 +2481,13 @@
         }
       }
       if (!isSelObj(obj)) setSel(obj);
+      // selecting an object that is NOT one of the picker's candidates closes the picker
+      const leftOverlap = ed.overlap && !overlapHasItem(ed.overlap, obj);
+      if (leftOverlap) ed.overlap = null;
       const startMouse = s2w(pt.x, pt.y);
       const items = (ed.selset || []).map(movableRef).filter(Boolean).map((r) => { let sx, sy; if (r.kind === 'node') { const p = g2m(r.g, r.n.graphX, r.n.graphY); sx = p.x; sy = p.y; } else { sx = r.el.mapX; sy = r.el.mapY; } return { r, sx, sy }; });
       ed.drag = items.length ? { kind: 'move', items, startMouse, moved: false } : null;
-      paintAndInfo();
+      if (leftOverlap) render(); else paintAndInfo();
     } else if (e.shiftKey) { ed.drag = { kind: 'marquee', x0: pt.x, y0: pt.y, add: true }; ed.marquee = { minX: pt.x, minY: pt.y, maxX: pt.x, maxY: pt.y }; }
     else { setSel(null); ed.drag = { kind: 'pan', sx: pt.x, sy: pt.y, vx: ed.view.x, vy: ed.view.y }; if (ed.overlap) { ed.overlap = null; render(); } else paintAndInfo(); }
   }
@@ -2594,6 +2604,7 @@
   }
   function openMapDialogFor(hit) {
     const ed = state.mapEd; setSel({ type: hit.type, id: hit.id, graphId: hit.graphId });
+    if (ed.overlap && !overlapHasItem(ed.overlap, hit)) ed.overlap = null; // editing something else → picker closes
     if (hit.type === 'node') ed.dialog = { kind: 'node', graphId: hit.graphId, id: hit.id };
     else if (hit.type === 'edge') ed.dialog = { kind: 'edge', graphId: hit.graphId, id: hit.id };
     else if (hit.type === 'station') ed.dialog = { kind: 'station', id: hit.id };
