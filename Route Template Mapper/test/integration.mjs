@@ -711,6 +711,40 @@ console.log('\n[Q] Auto-sync after map edits · Edit-all · Tusk container value
   ok('bulk edit writes the value into every mapping', !!key && kukaG.bundle.mappings.every((m) => (m.entries.find((e) => e.key === key) || {}).value === 'ZZ_BULK'), key + '');
 }
 
+// ============================ R) Station geometry values refresh on EXISTING mappings ============================
+console.log('\n[R] Existing mappings get their geometry values refreshed (fix)');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  const api = w.__rtm, s = api.state;
+  const tuskG = s.graphs[1];
+  const ev = (m, k) => ((m.entries || []).find((e) => e.key === k) || {}).value;
+
+  // loading a map immediately corrects the sample values to the real geometry
+  const d13 = tuskG.bundle.mappings.find((m) => m.id === 'TUSK_DROPOFF_0013_mapping');
+  ok('map load corrects sample values to real geometry (3.0 → 2.95)', ev(d13, 'DROP_CONTAINERY_A') === '2.95', ev(d13, 'DROP_CONTAINERY_A'));
+  ok('theta present and correct on the existing mapping', ev(d13, 'DROP_CONTAINERTHETA_A') === '-1.57' && ev(d13, 'MAPTHETA_A') === '-1.57');
+
+  // corrupt a geometry value + hand-edit a non-geometry value, then press Generate
+  const d03 = tuskG.bundle.mappings.find((m) => m.id === 'TUSK_DROPOFF_0003_mapping');
+  d03.entries.find((e) => e.key === 'DROP_CONTAINERX_A').value = '99';
+  d03.entries.find((e) => e.key === 'DROP_DESCRIPTION_A').value = 'my note';
+  click(qa(w, '.graph-pill')[1], w);
+  click(q(w, '[data-act="tab"][data-tab="mappings"]'), w);
+  const before = tuskG.bundle.mappings.length;
+  click(q(w, '[data-act="map:generate"]'), w);
+  ok('Generate refreshes geometry values on EXISTING mappings (99 → 20.5)', ev(d03, 'DROP_CONTAINERX_A') === '20.5', ev(d03, 'DROP_CONTAINERX_A'));
+  ok('non-geometry values are untouched by the refresh', ev(d03, 'DROP_DESCRIPTION_A') === 'my note');
+  ok('refresh does not duplicate mappings', tuskG.bundle.mappings.length === before, tuskG.bundle.mappings.length + '/' + before);
+
+  // moving the station on the map auto-refreshes the values on return
+  click(q(w, '[data-act="mapEdit"]'), w);
+  api.allStations().find((x) => x.st.id === 'T1').st.mapX += 1;
+  s.mapEd._dirty = true;
+  click(q(w, '[data-act="route"]'), w);
+  ok('moving the station auto-refreshes containerX (20.5 → 21.5)', ev(d03, 'DROP_CONTAINERX_A') === '21.5', ev(d03, 'DROP_CONTAINERX_A'));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

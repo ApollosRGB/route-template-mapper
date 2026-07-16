@@ -569,24 +569,43 @@
       navigationGraphId: gid
     };
   }
-  function generateFromMap(gr) {
+  // valuesOnly: refresh the geometry-derived station values on existing mappings without
+  // creating anything new (used on map load / session resume).
+  function generateFromMap(gr, valuesOnly) {
     const g = gr || curGraph();
-    if (!g) return 0;
+    if (!g) return { added: 0, updated: 0 };
     const bundle = g.bundle, gid = g.graphId;
-    let added = 0;
+    let added = 0, updated = 0;
     const exists = (id) => bundle.mappings.some((m) => m.id === id);
     bundle.templates.forEach((t) => {
       const sample = bundle.mappings.find((m) => m.template === t.id);
       const station = templateStationInfo(t);
       if (station) {
         handlingStationsFor(gid).forEach(({ stationId, nodeId }) => {
-          const ov = stationGeometryOverrides(t, gid, stationId, nodeId);
+          const geo = stationGeometryOverrides(t, gid, stationId, nodeId);
+          const id = t.id + '_' + nodeId + '_mapping';
+          const existing = bundle.mappings.find((m) => m.id === id && m.template === t.id);
+          if (!existing && valuesOnly) return;
+          if (existing) {
+            // refresh the geometry-derived entries (containerX/Y, containerTheta, mapTheta) on
+            // mappings that already exist — these track the map by definition
+            let changed = false;
+            Object.keys(geo).forEach((k) => {
+              const e = (existing.entries || []).find((x) => x.key === k);
+              if (e) { if (String(e.value) !== geo[k]) { e.value = geo[k]; changed = true; } }
+              else { existing.entries.push({ key: k, value: geo[k] }); changed = true; }
+            });
+            if (changed) updated++;
+            return;
+          }
+          const ov = geo;
           if (station.nodeRef) ov[station.nodeRef] = nodeId;
           ov[station.externalIdPlaceholder] = stationId;
-          const m = buildMapping(t, gid, ov, sample); m.id = t.id + '_' + nodeId + '_mapping';
-          if (!exists(m.id)) { bundle.mappings.push(m); added++; }
+          const m = buildMapping(t, gid, ov, sample); m.id = id;
+          bundle.mappings.push(m); added++;
         });
       } else if (templateIsEdge(t)) {
+        if (valuesOnly) return;
         const refs = templateNodeRefs(t); const A = refs[0], B = refs[1];
         mapEdgesFor(gid).forEach((ed) => {
           const ov = {}; if (A) ov[A] = ed.startNodeId; if (B) ov[B] = ed.endNodeId;
@@ -594,6 +613,7 @@
           if (!exists(m.id)) { bundle.mappings.push(m); added++; }
         });
       } else {
+        if (valuesOnly) return;
         const refs = templateNodeRefs(t); const A = refs[0];
         mapNodesFor(gid).forEach((nd) => {
           const ov = {}; if (A) ov[A] = nd.id;
@@ -602,15 +622,24 @@
         });
       }
     });
-    return added;
+    return { added, updated };
+  }
+  // Refresh only the geometry-derived station values across all graphs (no adds/removes).
+  function refreshAllStationValues() {
+    let updated = 0;
+    (state.graphs || []).forEach((g) => {
+      if (g.noRouteTemplate || !(g.bundle.templates || []).length || !(g.bundle.mappings || []).length) return;
+      updated += generateFromMap(g, true).updated;
+    });
+    return updated;
   }
   // Drop mappings whose referenced map element (edge / station+access-node pairing / node) no
   // longer exists. Mappings with empty references or orphan templates are left alone.
   function pruneStaleMappings(g) {
     const gid = g.graphId, bundle = g.bundle;
     const nodeIds = new Set(mapNodesFor(gid).map((n) => n.id));
-    const edgePairs = new Set(mapEdgesFor(gid).map((e) => e.startNodeId + ' ' + e.endNodeId));
-    const stationPairs = new Set(handlingStationsFor(gid).map((x) => x.stationId + ' ' + x.nodeId));
+    const edgePairs = new Set(mapEdgesFor(gid).map((e) => e.startNodeId + '\u0000' + e.endNodeId));
+    const stationPairs = new Set(handlingStationsFor(gid).map((x) => x.stationId + '\u0000' + x.nodeId));
     const before = bundle.mappings.length;
     bundle.mappings = bundle.mappings.filter((m) => {
       if (m.navigationGraphId && m.navigationGraphId !== gid) return true;
@@ -622,12 +651,12 @@
       if (station) {
         const sid = val(station.externalIdPlaceholder), nid = station.nodeRef ? val(station.nodeRef) : '';
         if (!sid && !nid) return true;
-        return stationPairs.has(sid + ' ' + nid);
+        return stationPairs.has(sid + '\u0000' + nid);
       }
       if (templateIsEdge(t)) {
         const a = refs[0] ? val(refs[0]) : '', b = refs[1] ? val(refs[1]) : '';
         if (!a || !b) return true;
-        return edgePairs.has(a + ' ' + b);
+        return edgePairs.has(a + '\u0000' + b);
       }
       const a = refs[0] ? val(refs[0]) : '';
       if (!a) return true;
@@ -638,16 +667,17 @@
   // Auto-sync after map edits: for every graph that already uses generated/loaded mappings,
   // add the mappings for new map elements and drop the ones for deleted elements.
   function syncBundlesWithMap() {
-    let added = 0, removed = 0;
+    let added = 0, removed = 0, updated = 0;
     (state.graphs || []).forEach((g) => {
       if (g.noRouteTemplate || !(g.bundle.templates || []).length) return;
       if (!(g.bundle.mappings || []).length) return; // never generated/loaded mappings → stay hands-off
       removed += pruneStaleMappings(g);
-      added += generateFromMap(g);
+      const r = generateFromMap(g);
+      added += r.added; updated += r.updated;
     });
     if (state.mi >= state.bundle.mappings.length) state.mi = Math.max(0, state.bundle.mappings.length - 1);
     state.sel = new Set([...state.sel].filter((m) => state.bundle.mappings.includes(m)));
-    return { added, removed };
+    return { added, removed, updated };
   }
 
   // -------------------------------------------------------------- persistence
@@ -1367,7 +1397,7 @@
       // ---- landing / global ----
       case 'loadMap': doLoadMap(); return;
       case 'loadExample': loadMapData(clone(window.EXAMPLE_MAP), 'example map'); return;
-      case 'resume': { const sess = loadSession(); if (sess) { state.map = normalizeMap(sess.map); state.mapName = sess.mapName || 'map'; state.graphs = sess.graphs; state.gi = sess.gi || 0; state.deps = normalizeDeps(sess.deps); state.editingSample = null; resetEditState(); if (sess.mapEd) { if (Number.isFinite(sess.mapEd.decimals)) state.mapEd.decimals = sess.mapEd.decimals; state.mapEd.ungroupedStations = Array.isArray(sess.mapEd.ungroupedStations) ? sess.mapEd.ungroupedStations : []; state.mapEd.bg = sess.mapEd.bg || null; } state.view = 'route'; state.mapEd._fitted = false; render(); } return; }
+      case 'resume': { const sess = loadSession(); if (sess) { state.map = normalizeMap(sess.map); state.mapName = sess.mapName || 'map'; state.graphs = sess.graphs; state.gi = sess.gi || 0; state.deps = normalizeDeps(sess.deps); state.editingSample = null; resetEditState(); if (sess.mapEd) { if (Number.isFinite(sess.mapEd.decimals)) state.mapEd.decimals = sess.mapEd.decimals; state.mapEd.ungroupedStations = Array.isArray(sess.mapEd.ungroupedStations) ? sess.mapEd.ungroupedStations : []; state.mapEd.bg = sess.mapEd.bg || null; } state.view = 'route'; state.mapEd._fitted = false; const nUp = refreshAllStationValues(); if (nUp) { persist(); } render(); if (nUp) toast('Station values refreshed', nUp + ' mapping(s) updated from the map geometry (containerX/Y, theta).', 'success'); } return; }
       case 'theme': toggleTheme(); return;
       case 'home': {
         // Back to the start screen. Work is saved first, so "Resume last session" restores it.
@@ -1391,7 +1421,7 @@
       // ---- map editor: entry / navigation ----
       case 'newMap': { state.map = normalizeMap(emptyMap()); state.map.navigationGraphs.push(newGraph('graph1')); state.mapName = 'untitled map'; state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null; state.mapEd.overlap = null; state.mapEd.gi = 0; state.mapEd.selset = []; state.mapEd.mode = 'select'; state.mapEd.ungroupedStations = []; state.mapEd.bg = null; state.mapEd._fitted = false; state.mapEd._dirty = true; state.preview = false; reconcileGraphsAfterMapEdit(); state.view = 'map'; persist(); render(); return; }
       case 'mapEdit': { if (!state.map) { toast('No map', 'Load or create a map first.', 'error'); return; } collectUngrouped(); state.mapEd._fitted = false; state.preview = false; state.view = 'map'; render(); return; }
-      case 'route': { if (state.map) { const r = reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { const sy = syncBundlesWithMap(); toast('Map applied', r.kept + ' graph(s) kept · ' + r.added + ' new' + (sy.added || sy.removed ? ' · mappings synced: +' + sy.added + ' / −' + sy.removed : ''), 'success'); state.mapEd._dirty = false; persist(); } } state.preview = false; state.view = 'route'; render(); return; }
+      case 'route': { if (state.map) { const r = reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { const sy = syncBundlesWithMap(); toast('Map applied', r.kept + ' graph(s) kept · ' + r.added + ' new' + (sy.added || sy.removed || sy.updated ? ' · mappings: +' + sy.added + ' / −' + sy.removed + ' / ~' + sy.updated : ''), 'success'); state.mapEd._dirty = false; persist(); } } state.preview = false; state.view = 'route'; render(); return; }
       case 'copyMapJson': { const j = JSON.stringify(canonicalizeMap(state.map), null, 2); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(j).then(() => toast('Copied', '', 'success'), () => {}); return; }
 
       // ---- map editor: tools ----
@@ -1475,7 +1505,7 @@
       case 'graph:noTemplate': { const g = curGraph(); if (g) { g.noRouteTemplate = true; state.exportSel.delete(state.gi); persist(); render(); } return; }
       case 'graph:withTemplate': { const g = curGraph(); if (g) { g.noRouteTemplate = false; if ((g.bundle.templates || []).length === 0 && !g.matched) g.baseChosen = false; persist(); render(); } return; }
       case 'graph:saveSample': state.saveDialog = true; render(); return;
-      case 'map:generate': { if (!curGraph()) return; const n = generateFromMap(); persist(); render(); toast(n ? 'Generated ' + n + ' mappings' : 'Nothing to add', n ? 'From the map’s edges & handling stations. Review the values.' : 'All map-derived mappings already exist.', 'success'); return; }
+      case 'map:generate': { if (!curGraph()) return; const r = generateFromMap(); persist(); render(); toast(r.added || r.updated ? 'Generated ' + r.added + ' · refreshed ' + r.updated : 'Nothing to do', r.added || r.updated ? 'From the map’s edges & handling stations; station geometry values recomputed. Review the values.' : 'All map-derived mappings exist and their station values are up to date.', 'success'); return; }
       case 'exportAll': openExport(); return;
       case 'export:toggle': { if (state.exportSel.has(i)) state.exportSel.delete(i); else state.exportSel.add(i); render(); return; }
       case 'export:map': { state.exportMap = !state.exportMap; render(); return; }
@@ -1614,6 +1644,7 @@
     state.map = normalizeMap(map); state.mapName = name || 'map'; state.graphs = graphsFromMap(state.map); state.gi = 0; state.editingSample = null; resetEditState();
     state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null; state.mapEd.overlap = null;
     state.view = 'route'; state.mapEd.gi = 0; state.mapEd.selset = []; state.mapEd.dialog = null; state.mapEd.ungroupedStations = []; state.mapEd.bg = null; state.mapEd._fitted = false; state.mapEd._dirty = false;
+    refreshAllStationValues(); // station geometry values match THIS map from the start
     persist(); render();
     const matched = state.graphs.filter((g) => g.matched).length;
     toast('Map loaded', state.graphs.length + ' graph(s) · ' + matched + ' matched known layout(s)', 'success');
@@ -1646,9 +1677,9 @@
       persist(); render();
       toast('Dependencies loaded', arr.length + ' entr' + (arr.length === 1 ? 'y' : 'ies') + (name ? ' from ' + name : ''), 'success');
       const known = new Set();
-      ((state.map && state.map.navigationGraphs) || []).forEach((g) => (g.nodes || []).forEach((n) => known.add(g.id + ' ' + n.id)));
+      ((state.map && state.map.navigationGraphs) || []).forEach((g) => (g.nodes || []).forEach((n) => known.add(g.id + '\u0000' + n.id)));
       let missing = 0;
-      arr.forEach((d) => { if (!known.has(d.fromNavigationGraph + ' ' + d.fromNode)) missing++; (d.to || []).forEach((t) => (t.nodes || []).forEach((n) => { if (!known.has(t.navigationGraph + ' ' + n)) missing++; })); });
+      arr.forEach((d) => { if (!known.has(d.fromNavigationGraph + '\u0000' + d.fromNode)) missing++; (d.to || []).forEach((t) => (t.nodes || []).forEach((n) => { if (!known.has(t.navigationGraph + '\u0000' + n)) missing++; })); });
       if (missing) toast('Check the file', missing + ' node reference(s) don’t exist on this map.', 'error');
     };
     if (window.electronAPI && window.electronAPI.openBundleDialog) {
@@ -1668,7 +1699,7 @@
 
   function openExport() {
     if (state.editingSample) { doDownloadSingle(); return; }
-    if (state.view === 'map' && state.map) { reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { const sy = syncBundlesWithMap(); if (sy.added || sy.removed) toast('Mappings synced', '+' + sy.added + ' new · −' + sy.removed + ' stale', 'success'); state.mapEd._dirty = false; persist(); } }
+    if (state.view === 'map' && state.map) { reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { const sy = syncBundlesWithMap(); if (sy.added || sy.removed || sy.updated) toast('Mappings synced', '+' + sy.added + ' new · −' + sy.removed + ' stale · ~' + sy.updated + ' refreshed', 'success'); state.mapEd._dirty = false; persist(); } }
     if (!state.graphs.length && !state.map) { toast('Nothing to export', 'Load or create a map first.', 'error'); return; }
     state.exportSel = new Set(state.graphs.map((_, i) => i).filter((i) => !state.graphs[i].noRouteTemplate));
     state.exportDeps = state.deps.length > 0;
@@ -2604,7 +2635,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides, refreshAllStationValues };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
