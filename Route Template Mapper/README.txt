@@ -66,7 +66,11 @@ THE FLOW
    coordinates, and containerTheta / mapTheta with the direction
    from the access node to the station (rounded to 2 decimals).
    All other values come from the first existing mapping of that
-   template (the sample), as before.
+   template (the sample), as before. If a constant is still EMPTY
+   after that (e.g. no sample, or an older session), it gets a
+   built-in default: autoReturnNode=true, containerTypeId=1,
+   onlyFork=true, detectBeforeDrop=false. Values you typed are
+   never overwritten by these defaults.
 
    AUTO-SYNC: once a graph has generated (or loaded) mappings,
    they stay in step with the map by themselves - when you come

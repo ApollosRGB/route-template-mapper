@@ -551,6 +551,17 @@
     });
     return ov;
   }
+  // Default constants for pickup/dropoff-style station mappings, matched by action-parameter KEY.
+  // Used to fill entries that are still EMPTY — a value the user (or the sample) provided
+  // is never overwritten.
+  const STATION_PARAM_DEFAULTS = { autoReturnNode: 'true', containerTypeId: '1', onlyFork: 'true', detectBeforeDrop: 'false' };
+  function stationConstantDefaults(t) {
+    const ov = {};
+    (t.steps || []).forEach((s) => (s.actions || []).forEach((a) => (a.actionParameters || []).forEach((p) => {
+      if (p.value && Object.prototype.hasOwnProperty.call(STATION_PARAM_DEFAULTS, p.key)) ov[p.value] = STATION_PARAM_DEFAULTS[p.key];
+    })));
+    return ov;
+  }
 
   function buildMapping(t, gid, overrides, sample) {
     const entries = allPlaceholders(t).map((k) => {
@@ -581,6 +592,7 @@
       const sample = bundle.mappings.find((m) => m.template === t.id);
       const station = templateStationInfo(t);
       if (station) {
+        const defs = stationConstantDefaults(t);
         handlingStationsFor(gid).forEach(({ stationId, nodeId }) => {
           const geo = stationGeometryOverrides(t, gid, stationId, nodeId);
           const id = t.id + '_' + nodeId + '_mapping';
@@ -588,12 +600,18 @@
           if (!existing && valuesOnly) return;
           if (existing) {
             // refresh the geometry-derived entries (containerX/Y, containerTheta, mapTheta) on
-            // mappings that already exist — these track the map by definition
+            // mappings that already exist — these track the map by definition — and fill any
+            // still-EMPTY constant entries with their defaults (older sessions)
             let changed = false;
             Object.keys(geo).forEach((k) => {
               const e = (existing.entries || []).find((x) => x.key === k);
               if (e) { if (String(e.value) !== geo[k]) { e.value = geo[k]; changed = true; } }
               else { existing.entries.push({ key: k, value: geo[k] }); changed = true; }
+            });
+            Object.keys(defs).forEach((k) => {
+              const e = (existing.entries || []).find((x) => x.key === k);
+              if (e) { if (String(e.value).trim() === '') { e.value = defs[k]; changed = true; } }
+              else { existing.entries.push({ key: k, value: defs[k] }); changed = true; }
             });
             if (changed) updated++;
             return;
@@ -602,6 +620,8 @@
           if (station.nodeRef) ov[station.nodeRef] = nodeId;
           ov[station.externalIdPlaceholder] = stationId;
           const m = buildMapping(t, gid, ov, sample); m.id = id;
+          // constants default in where neither the sample nor an override provided a value
+          m.entries.forEach((e) => { if (String(e.value).trim() === '' && defs[e.key] != null) e.value = defs[e.key]; });
           bundle.mappings.push(m); added++;
         });
       } else if (templateIsEdge(t)) {
@@ -1397,7 +1417,7 @@
       // ---- landing / global ----
       case 'loadMap': doLoadMap(); return;
       case 'loadExample': loadMapData(clone(window.EXAMPLE_MAP), 'example map'); return;
-      case 'resume': { const sess = loadSession(); if (sess) { state.map = normalizeMap(sess.map); state.mapName = sess.mapName || 'map'; state.graphs = sess.graphs; state.gi = sess.gi || 0; state.deps = normalizeDeps(sess.deps); state.editingSample = null; resetEditState(); if (sess.mapEd) { if (Number.isFinite(sess.mapEd.decimals)) state.mapEd.decimals = sess.mapEd.decimals; state.mapEd.ungroupedStations = Array.isArray(sess.mapEd.ungroupedStations) ? sess.mapEd.ungroupedStations : []; state.mapEd.bg = sess.mapEd.bg || null; } state.view = 'route'; state.mapEd._fitted = false; const nUp = refreshAllStationValues(); if (nUp) { persist(); } render(); if (nUp) toast('Station values refreshed', nUp + ' mapping(s) updated from the map geometry (containerX/Y, theta).', 'success'); } return; }
+      case 'resume': { const sess = loadSession(); if (sess) { state.map = normalizeMap(sess.map); state.mapName = sess.mapName || 'map'; state.graphs = sess.graphs; state.gi = sess.gi || 0; state.deps = normalizeDeps(sess.deps); state.editingSample = null; resetEditState(); if (sess.mapEd) { if (Number.isFinite(sess.mapEd.decimals)) state.mapEd.decimals = sess.mapEd.decimals; state.mapEd.ungroupedStations = Array.isArray(sess.mapEd.ungroupedStations) ? sess.mapEd.ungroupedStations : []; state.mapEd.bg = sess.mapEd.bg || null; } state.view = 'route'; state.mapEd._fitted = false; const nUp = refreshAllStationValues(); if (nUp) { persist(); } render(); if (nUp) toast('Station values refreshed', nUp + ' mapping(s) updated (containerX/Y, theta, missing constants defaulted).', 'success'); } return; }
       case 'theme': toggleTheme(); return;
       case 'home': {
         // Back to the start screen. Work is saved first, so "Resume last session" restores it.

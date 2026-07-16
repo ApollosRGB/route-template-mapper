@@ -745,6 +745,40 @@ console.log('\n[R] Existing mappings get their geometry values refreshed (fix)')
   ok('moving the station auto-refreshes containerX (20.5 → 21.5)', ev(d03, 'DROP_CONTAINERX_A') === '21.5', ev(d03, 'DROP_CONTAINERX_A'));
 }
 
+// ============================ S) Constant defaults on station mappings ============================
+console.log('\n[S] Station constants default in when empty (older sessions), never overwrite');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  const api = w.__rtm, s = api.state;
+  const tuskG = s.graphs[1];
+  const ev = (m, k) => ((m.entries || []).find((e) => e.key === k) || {}).value;
+  const d03 = () => tuskG.bundle.mappings.find((m) => m.id === 'TUSK_DROPOFF_0003_mapping');
+
+  // simulate an older session: blank the constants, customise one of them
+  const m0 = d03();
+  m0.entries.find((e) => e.key === 'DROP_ONLYFORK_A').value = '';
+  m0.entries.find((e) => e.key === 'DROP_AUTORETURNNODE_A').value = '';
+  m0.entries.find((e) => e.key === 'detectBeforeDrop_1').value = '';
+  m0.entries.find((e) => e.key === 'DROP_CONTAINERTYPEID_A').value = '2'; // user's own value
+  m0.entries = m0.entries.filter((e) => e.key !== 'DROP_CONTAINERTHETA_A'); // and a missing entry
+  const nUp = api.refreshAllStationValues();
+  ok('refresh reports updates', nUp >= 1, nUp + '');
+  ok('empty onlyFork defaults to true', ev(d03(), 'DROP_ONLYFORK_A') === 'true');
+  ok('empty autoReturnNode defaults to true', ev(d03(), 'DROP_AUTORETURNNODE_A') === 'true');
+  ok('empty detectBeforeDrop defaults to false', ev(d03(), 'detectBeforeDrop_1') === 'false');
+  ok('customised containerTypeId (2) is NOT overwritten', ev(d03(), 'DROP_CONTAINERTYPEID_A') === '2');
+  ok('missing geometry entry is re-added by the refresh', ev(d03(), 'DROP_CONTAINERTHETA_A') === '0');
+
+  // brand-new mapping with NO sample at all still gets the defaults
+  tuskG.bundle.mappings = tuskG.bundle.mappings.filter((m) => m.template !== 'TUSK_DROPOFF');
+  api.generateFromMap(tuskG);
+  const fresh = d03();
+  ok('sample-less generation defaults containerTypeId to 1', ev(fresh, 'DROP_CONTAINERTYPEID_A') === '1', ev(fresh, 'DROP_CONTAINERTYPEID_A'));
+  ok('sample-less generation defaults the other constants', ev(fresh, 'DROP_ONLYFORK_A') === 'true' && ev(fresh, 'DROP_AUTORETURNNODE_A') === 'true' && ev(fresh, 'detectBeforeDrop_1') === 'false');
+  ok('geometry values present alongside the defaults', ev(fresh, 'DROP_CONTAINERX_A') === '20.5' && ev(fresh, 'MAPTHETA_A') === '0');
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);
