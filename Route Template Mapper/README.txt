@@ -145,6 +145,13 @@ back (your existing template work is kept where graphs still match).
 - ICONS: each element type has its own shape + colour — blue circle
   (node), teal rounded-square (station), red hexagon (charger), amber
   triangle (traffic light), violet outline (area).
+- FOOTPRINTS: stations and chargers also draw their REAL SIZE as a
+  dashed rectangle (length along X, width along Y, centred on the
+  icon), scaled with the zoom - so you can see exactly how much
+  space each one takes. Set Length / Width / Height by
+  double-clicking the station or charger; the selected one's
+  footprint highlights gold. The footprint is display-only: clicks
+  pass through it to nodes and edges underneath.
 - RIGHT-CLICK = CREATE with the chosen tool:
     * Node/Station/Charger/Light: right-click the canvas to place one.
     * Edge: right-click the start node, then the end node.

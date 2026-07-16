@@ -1951,8 +1951,8 @@
     const sel = ss[0]; let x = '-', y = '-', extra = '';
     const accHint = (el, kind) => '<div class="mi-row"><span>Access</span><b>' + (el.accessNodes || []).length + ' node(s)</b></div>' + (state.mapEd.mode === kind ? '<div class="mi-hint muted">Left-click a node to add/remove it as an access node.</div>' : '<div class="mi-hint muted">Pick the ' + (kind === 'station' ? 'Station' : 'Charger') + ' tool to assign access nodes.</div>');
     if (sel.type === 'node') { const g = (state.map.navigationGraphs || []).find((gg) => gg.id === sel.graphId); const n = g && nodeById(g, sel.id); if (n) { x = rnd(n.graphX); y = rnd(n.graphY); } }
-    else if (sel.type === 'station') { const f = allStations().find((s) => s.st.id === sel.id); if (f) { x = rnd(f.st.mapX); y = rnd(f.st.mapY); extra = accHint(f.st, 'station'); const grp = groupOfStation(sel.id); const wsIds = grp ? (grp.waitingSpots || []).map((w) => w && w.id).filter(Boolean) : []; extra += '<div class="mi-row"><span>Waiting</span><b>' + (wsIds.length ? esc(wsIds.join(', ')) : '—') + '</b></div>' + (wsIds.length ? '<div class="mi-hint muted">Waiting-spot nodes are highlighted orange. Double-click the station to change them.</div>' : ''); } }
-    else if (sel.type === 'charger') { const c = (state.map.chargingStations || []).find((c) => c.id === sel.id); if (c) { x = rnd(c.mapX); y = rnd(c.mapY); extra = accHint(c, 'charger'); } }
+    else if (sel.type === 'station') { const f = allStations().find((s) => s.st.id === sel.id); if (f) { x = rnd(f.st.mapX); y = rnd(f.st.mapY); extra = '<div class="mi-row"><span>Size</span><b>' + rnd(f.st.length) + ' × ' + rnd(f.st.width) + ' m</b></div>' + accHint(f.st, 'station'); const grp = groupOfStation(sel.id); const wsIds = grp ? (grp.waitingSpots || []).map((w) => w && w.id).filter(Boolean) : []; extra += '<div class="mi-row"><span>Waiting</span><b>' + (wsIds.length ? esc(wsIds.join(', ')) : '—') + '</b></div>' + (wsIds.length ? '<div class="mi-hint muted">Waiting-spot nodes are highlighted orange. Double-click the station to change them.</div>' : ''); } }
+    else if (sel.type === 'charger') { const c = (state.map.chargingStations || []).find((c) => c.id === sel.id); if (c) { x = rnd(c.mapX); y = rnd(c.mapY); extra = '<div class="mi-row"><span>Size</span><b>' + rnd(c.length) + ' × ' + rnd(c.width) + ' m</b></div>' + accHint(c, 'charger'); } }
     else if (sel.type === 'light') { const l = (state.map.trafficLights || []).find((l) => l.id === sel.id); if (l) { x = rnd(l.mapX); y = rnd(l.mapY); } }
     return '<div class="mi-row"><span>' + esc(sel.type) + '</span><b>' + esc(sel.id) + '</b></div>' +
       '<div class="mi-row"><span>X</span><b>' + x + '</b></div><div class="mi-row"><span>Y</span><b>' + y + '</b></div>' + extra +
@@ -1996,6 +1996,8 @@
           : '<div class="hint">Ungrouped station — assign it to a group (Stations → Groups) to attach waiting spots.</div>';
       }
       body = mdField('ID', 'md-id', el.id) + '<div class="grid-2">' + mdField('Map X', 'md-x', rnd(el.mapX), 'number') + mdField('Map Y', 'md-y', rnd(el.mapY), 'number') + '</div>' +
+        '<div class="grid-3">' + mdField('Length (X) [m]', 'md-len', rnd(el.length), 'number') + mdField('Width (Y) [m]', 'md-wid', rnd(el.width), 'number') + mdField('Height [m]', 'md-hei', rnd(el.height), 'number') + '</div>' +
+        '<div class="hint">Length × width is drawn on the map as the ' + (isCh ? 'charger' : 'station') + '’s footprint (centred on Map X/Y), so you can see the space it takes.</div>' +
         (isCh ? '<label class="mt-check"><input id="md-ctrl" type="checkbox"' + (el.controlled ? ' checked' : '') + ' /> Controlled</label>' : '') +
         '<div class="field"><label>Access nodes (one per line — graphId:nodeId)</label><textarea id="md-acc" rows="3">' + esc(acc) + '</textarea></div>' + wsBody;
     } else if (d.kind === 'light') {
@@ -2052,6 +2054,8 @@
       const isCh = d.kind === 'charger';
       const el = isCh ? (state.map.chargingStations || []).find((c) => c.id === d.id) : (allStations().find((s) => s.st.id === d.id) || {}).st; if (!el) return;
       el.id = String(val('md-id')).trim() || el.id; el.mapX = rnd(+val('md-x') || 0); el.mapY = rnd(+val('md-y') || 0);
+      const numOr = (fid, prev) => { const n2 = parseFloat(val(fid)); return isFinite(n2) && n2 > 0 ? rnd(n2) : prev; };
+      el.length = numOr('md-len', el.length); el.width = numOr('md-wid', el.width); el.height = numOr('md-hei', el.height);
       if (isCh) el.controlled = chk('md-ctrl');
       el.accessNodes = String(val('md-acc')).split('\n').map((s) => s.trim()).filter(Boolean).map((line) => { const i = line.indexOf(':'); return { navigationGraphId: i >= 0 ? line.slice(0, i) : '', nodeId: i >= 0 ? line.slice(i + 1) : line }; });
       if (!isCh) {
@@ -2234,6 +2238,16 @@
         s += '<circle class="m-draftpt' + dcls + '" cx="' + sc.x + '" cy="' + sc.y + '" r="3"/>';
       });
     }
+    // station / charger footprints — the real length × width in metres, drawn UNDER the
+    // graphs (pointer-events: none) so nodes and edges stay clickable above them
+    const foot = (el, cls, selFlag) => {
+      const L = +el.length || 0, W = +el.width || 0;
+      if (L <= 0.01 || W <= 0.01) return '';
+      const tl = w2s(el.mapX - L / 2, el.mapY + W / 2);
+      return '<rect class="m-foot ' + cls + (selFlag ? ' sel' : '') + '" x="' + tl.x + '" y="' + tl.y + '" width="' + (L * v.zoom) + '" height="' + (W * v.zoom) + '" rx="' + Math.min(6, v.zoom * 0.15) + '"/>';
+    };
+    allStations().forEach(({ st }) => { s += foot(st, 'station', isSel('station', st.id)); });
+    (m.chargingStations || []).forEach((c) => { s += foot(c, 'charger', isSel('charger', c.id)); });
     (m.navigationGraphs || []).forEach((g, gi) => {
       const active = gi === ed.gi, np = {};
       (g.nodes || []).forEach((n) => { np[n.id] = g2m(g, n.graphX, n.graphY); });

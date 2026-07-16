@@ -779,6 +779,55 @@ console.log('\n[S] Station constants default in when empty (older sessions), nev
   ok('geometry values present alongside the defaults', ev(fresh, 'DROP_CONTAINERX_A') === '20.5' && ev(fresh, 'MAPTHETA_A') === '0');
 }
 
+// ============================ T) Station / charger footprints (length × width) ============================
+console.log('\n[T] Station size — editable length/width and a real-size footprint');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  click(q(w, '[data-act="mapEdit"]'), w);
+  const api = w.__rtm, s = api.state;
+
+  // footprints render for every station (default 5×5 m)
+  ok('every station draws a footprint rect', qa(w, 'rect.m-foot.station').length === api.allStations().length, qa(w, 'rect.m-foot.station').length + '');
+  ok('footprints are display-only (clicks pass through)', qa(w, 'rect.m-foot').every((r) => !r.hasAttribute('data-mt')));
+
+  // edit length/width via the station dialog
+  const k1 = api.allStations().find((x) => x.st.id === 'K1').st;
+  w.__rtm.state.mapEd.dialog = { kind: 'station', id: 'K1' };
+  w.dispatchEvent(new w.Event('resize'));
+  click(q(w, '[data-act="mapMode"][data-mode="select"]'), w); // re-render with the dialog
+  ok('station dialog offers Length / Width / Height', !!q(w, '#md-len') && !!q(w, '#md-wid') && !!q(w, '#md-hei'));
+  q(w, '#md-len').value = '3'; q(w, '#md-wid').value = '1.5';
+  click(q(w, '[data-act="mapDlg:ok"]'), w);
+  ok('length / width are applied', k1.length === 3 && k1.width === 1.5, k1.length + 'x' + k1.width);
+  ok('height untouched when unchanged', k1.height === 5);
+
+  // the footprint reflects the new size at the current zoom, centred on the station
+  const zoom = s.mapEd.view.zoom;
+  const fp = qa(w, 'rect.m-foot.station').find((r) => Math.abs(parseFloat(r.getAttribute('width')) - 3 * zoom) < 0.01);
+  ok('footprint width = length × zoom', !!fp, qa(w, 'rect.m-foot.station').map((r) => r.getAttribute('width')).join(','));
+  ok('footprint height = width × zoom', fp && Math.abs(parseFloat(fp.getAttribute('height')) - 1.5 * zoom) < 0.01);
+  const cx = parseFloat(fp.getAttribute('x')) + parseFloat(fp.getAttribute('width')) / 2;
+  const scr = api.g2m; // centre check via w2s equivalent: station screen pos
+  const stIcon = q(w, 'rect[data-mt="station"][data-mid="K1"]');
+  const iconCx = parseFloat(stIcon.getAttribute('x')) + 7;
+  ok('footprint is centred on the station', Math.abs(cx - iconCx) < 0.6, cx + ' vs ' + iconCx);
+
+  // selected station highlights its footprint
+  s.mapEd.selset = [{ type: 'station', id: 'K1' }];
+  w.document.defaultView.dispatchEvent(new w.Event('resize'));
+  ok('selected station footprint gets the sel class', !!q(w, 'rect.m-foot.station.sel'));
+  ok('info panel shows the size', /3\s*×\s*1\.5\s*m/.test(q(w, '#map-info').textContent), q(w, '#map-info').textContent);
+
+  // chargers get the same treatment + sizes survive the export
+  s.map.chargingStations.push({ id: 'C9', mapX: 0, mapY: 0, mapZ: 0, length: 2, width: 4, height: 1, controlled: true, accessNodes: [] });
+  w.document.defaultView.dispatchEvent(new w.Event('resize'));
+  ok('charger footprint renders', qa(w, 'rect.m-foot.charger').length === 1);
+  const cm = api.canonicalizeMap(s.map);
+  const k1x = cm.handlingStationGroups.flatMap((g) => g.handlingStations).find((x) => x.id === 'K1');
+  ok('edited size reaches the exported map JSON', k1x.length === 3 && k1x.width === 1.5 && k1x.height === 5, JSON.stringify({ l: k1x.length, w: k1x.width, h: k1x.height }));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

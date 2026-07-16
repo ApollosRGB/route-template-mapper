@@ -720,3 +720,9 @@ input:focus, select:focus, textarea:focus { border-color: hsl(var(--ring) / .8);
 .ov-icon.station { color: #0d9488; }
 .ov-icon.charger { color: #dc2626; }
 .ov-icon.light { color: #f59e0b; }
+
+/* ===== Station / charger footprints (length x width in metres) ===== */
+.m-foot { pointer-events: none; }
+.m-foot.station { fill: #0d94881a; stroke: #0d9488; stroke-width: 1.2; stroke-dasharray: 5 4; }
+.m-foot.charger { fill: #dc26261a; stroke: #dc2626; stroke-width: 1.2; stroke-dasharray: 5 4; }
+.m-foot.sel { stroke: #f5b301; fill: hsl(42 96% 55% / .10); stroke-dasharray: none; stroke-width: 1.6; }
