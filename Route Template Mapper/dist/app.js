@@ -528,7 +528,29 @@
     return null;
   }
   function templateIsEdge(t) { return (t.steps || []).some((s) => s.type === 'edge'); }
-  function sampleMappingFor(tId) { return state.bundle.mappings.find((m) => m.template === tId); }
+  // Geometry-derived values for a station mapping: containerX/Y = the station's position in the
+  // graph's LOCAL frame; containerTheta & mapTheta = direction from the access node to the station.
+  // Keyed by the template's placeholder tokens (whatever they are named), matched via the
+  // action-parameter/attribute KEYS (containerX, containerY, containerTheta, mapTheta).
+  function stationGeometryOverrides(t, gid, stationId, nodeId) {
+    const ov = {};
+    const g = ((state.map && state.map.navigationGraphs) || []).find((x) => x.id === gid);
+    const f = allStations().find((x) => x.st.id === stationId);
+    const nd = g && nodeById(g, nodeId);
+    if (!g || !f || !nd) return ov;
+    const loc = m2g(g, f.st.mapX, f.st.mapY);
+    const th = parseFloat(Math.atan2(loc.y - nd.graphY, loc.x - nd.graphX).toFixed(2));
+    (t.steps || []).forEach((s) => {
+      (s.actions || []).forEach((a) => (a.actionParameters || []).forEach((p) => {
+        if (!p.value) return;
+        if (p.key === 'containerX') ov[p.value] = String(rnd(loc.x));
+        else if (p.key === 'containerY') ov[p.value] = String(rnd(loc.y));
+        else if (p.key === 'containerTheta') ov[p.value] = String(th);
+      }));
+      (s.attributes || []).forEach((at) => { if (at.key === 'mapTheta' && at.value) ov[at.value] = String(th); });
+    });
+    return ov;
+  }
 
   function buildMapping(t, gid, overrides, sample) {
     const entries = allPlaceholders(t).map((k) => {
@@ -547,38 +569,85 @@
       navigationGraphId: gid
     };
   }
-  function generateFromMap() {
-    const g = curGraph();
+  function generateFromMap(gr) {
+    const g = gr || curGraph();
     if (!g) return 0;
-    const gid = g.graphId;
+    const bundle = g.bundle, gid = g.graphId;
     let added = 0;
-    const exists = (id) => state.bundle.mappings.some((m) => m.id === id);
-    state.bundle.templates.forEach((t) => {
-      const sample = sampleMappingFor(t.id);
+    const exists = (id) => bundle.mappings.some((m) => m.id === id);
+    bundle.templates.forEach((t) => {
+      const sample = bundle.mappings.find((m) => m.template === t.id);
       const station = templateStationInfo(t);
       if (station) {
         handlingStationsFor(gid).forEach(({ stationId, nodeId }) => {
-          const ov = {}; if (station.nodeRef) ov[station.nodeRef] = nodeId; ov[station.externalIdPlaceholder] = stationId;
+          const ov = stationGeometryOverrides(t, gid, stationId, nodeId);
+          if (station.nodeRef) ov[station.nodeRef] = nodeId;
+          ov[station.externalIdPlaceholder] = stationId;
           const m = buildMapping(t, gid, ov, sample); m.id = t.id + '_' + nodeId + '_mapping';
-          if (!exists(m.id)) { state.bundle.mappings.push(m); added++; }
+          if (!exists(m.id)) { bundle.mappings.push(m); added++; }
         });
       } else if (templateIsEdge(t)) {
         const refs = templateNodeRefs(t); const A = refs[0], B = refs[1];
         mapEdgesFor(gid).forEach((ed) => {
           const ov = {}; if (A) ov[A] = ed.startNodeId; if (B) ov[B] = ed.endNodeId;
           const m = buildMapping(t, gid, ov, sample); m.id = t.id + '_' + ed.startNodeId + '_' + ed.endNodeId + '_mapping';
-          if (!exists(m.id)) { state.bundle.mappings.push(m); added++; }
+          if (!exists(m.id)) { bundle.mappings.push(m); added++; }
         });
       } else {
         const refs = templateNodeRefs(t); const A = refs[0];
         mapNodesFor(gid).forEach((nd) => {
           const ov = {}; if (A) ov[A] = nd.id;
           const m = buildMapping(t, gid, ov, sample); m.id = t.id + '_' + nd.id + '_mapping';
-          if (!exists(m.id)) { state.bundle.mappings.push(m); added++; }
+          if (!exists(m.id)) { bundle.mappings.push(m); added++; }
         });
       }
     });
     return added;
+  }
+  // Drop mappings whose referenced map element (edge / station+access-node pairing / node) no
+  // longer exists. Mappings with empty references or orphan templates are left alone.
+  function pruneStaleMappings(g) {
+    const gid = g.graphId, bundle = g.bundle;
+    const nodeIds = new Set(mapNodesFor(gid).map((n) => n.id));
+    const edgePairs = new Set(mapEdgesFor(gid).map((e) => e.startNodeId + ' ' + e.endNodeId));
+    const stationPairs = new Set(handlingStationsFor(gid).map((x) => x.stationId + ' ' + x.nodeId));
+    const before = bundle.mappings.length;
+    bundle.mappings = bundle.mappings.filter((m) => {
+      if (m.navigationGraphId && m.navigationGraphId !== gid) return true;
+      const t = bundle.templates.find((x) => x.id === m.template);
+      if (!t) return true;
+      const val = (k) => { const e = (m.entries || []).find((x) => x.key === k); return e ? String(e.value).trim() : ''; };
+      const refs = templateNodeRefs(t);
+      const station = templateStationInfo(t);
+      if (station) {
+        const sid = val(station.externalIdPlaceholder), nid = station.nodeRef ? val(station.nodeRef) : '';
+        if (!sid && !nid) return true;
+        return stationPairs.has(sid + ' ' + nid);
+      }
+      if (templateIsEdge(t)) {
+        const a = refs[0] ? val(refs[0]) : '', b = refs[1] ? val(refs[1]) : '';
+        if (!a || !b) return true;
+        return edgePairs.has(a + ' ' + b);
+      }
+      const a = refs[0] ? val(refs[0]) : '';
+      if (!a) return true;
+      return nodeIds.has(a);
+    });
+    return before - bundle.mappings.length;
+  }
+  // Auto-sync after map edits: for every graph that already uses generated/loaded mappings,
+  // add the mappings for new map elements and drop the ones for deleted elements.
+  function syncBundlesWithMap() {
+    let added = 0, removed = 0;
+    (state.graphs || []).forEach((g) => {
+      if (g.noRouteTemplate || !(g.bundle.templates || []).length) return;
+      if (!(g.bundle.mappings || []).length) return; // never generated/loaded mappings → stay hands-off
+      removed += pruneStaleMappings(g);
+      added += generateFromMap(g);
+    });
+    if (state.mi >= state.bundle.mappings.length) state.mi = Math.max(0, state.bundle.mappings.length - 1);
+    state.sel = new Set([...state.sel].filter((m) => state.bundle.mappings.includes(m)));
+    return { added, removed };
   }
 
   // -------------------------------------------------------------- persistence
@@ -1057,6 +1126,7 @@
     const all = items.length > 0 && items.every((x) => state.sel.has(x.m));
     return '<div class="group-head"><input type="checkbox" class="li-check" data-act="grp:toggle" data-tpl="' + esc(tplKey) + '"' + (all ? ' checked' : '') + ' title="Select all in this group" />' +
       '<span class="group-title">' + esc(label) + '</span><span class="group-count">' + items.length + '</span>' +
+      (items.length > 1 ? '<button class="btn btn-ghost btn-icon btn-sm" data-act="grp:editAll" data-tpl="' + esc(tplKey) + '" title="Edit all ' + items.length + ' mappings of ' + esc(label) + ' at once">' + I.wand + '</button>' : '') +
       (canAdd ? '<button class="btn btn-ghost btn-icon btn-sm" data-act="map:addFor" data-tpl="' + esc(tplKey) + '" title="Add mapping for ' + esc(label) + '">' + I.plus + '</button>' : '') + '</div>';
   }
   function mappingListItems() {
@@ -1301,7 +1371,7 @@
       case 'theme': toggleTheme(); return;
       case 'home': {
         // Back to the start screen. Work is saved first, so "Resume last session" restores it.
-        if (state.view === 'map' && state.map) reconcileGraphsAfterMapEdit();
+        if (state.view === 'map' && state.map) { reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) syncBundlesWithMap(); }
         clearTimeout(saveTimer); persistNow();
         state.map = null; state.mapName = ''; state.graphs = []; state.gi = 0; state.deps = [];
         state.editingSample = null; state.preview = false; state.samplesModal = false; state.saveDialog = false; state.exportModal = false;
@@ -1321,7 +1391,7 @@
       // ---- map editor: entry / navigation ----
       case 'newMap': { state.map = normalizeMap(emptyMap()); state.map.navigationGraphs.push(newGraph('graph1')); state.mapName = 'untitled map'; state.deps = []; state.mapEd.depSel = null; state.mapEd.depPickFrom = false; state.mapEd.wsSel = null; state.mapEd.overlap = null; state.mapEd.gi = 0; state.mapEd.selset = []; state.mapEd.mode = 'select'; state.mapEd.ungroupedStations = []; state.mapEd.bg = null; state.mapEd._fitted = false; state.mapEd._dirty = true; state.preview = false; reconcileGraphsAfterMapEdit(); state.view = 'map'; persist(); render(); return; }
       case 'mapEdit': { if (!state.map) { toast('No map', 'Load or create a map first.', 'error'); return; } collectUngrouped(); state.mapEd._fitted = false; state.preview = false; state.view = 'map'; render(); return; }
-      case 'route': { if (state.map) { const r = reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { toast('Map applied', r.kept + ' graph(s) kept · ' + r.added + ' new', 'success'); state.mapEd._dirty = false; } } state.preview = false; state.view = 'route'; render(); return; }
+      case 'route': { if (state.map) { const r = reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { const sy = syncBundlesWithMap(); toast('Map applied', r.kept + ' graph(s) kept · ' + r.added + ' new' + (sy.added || sy.removed ? ' · mappings synced: +' + sy.added + ' / −' + sy.removed : ''), 'success'); state.mapEd._dirty = false; persist(); } } state.preview = false; state.view = 'route'; render(); return; }
       case 'copyMapJson': { const j = JSON.stringify(canonicalizeMap(state.map), null, 2); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(j).then(() => toast('Copied', '', 'success'), () => {}); return; }
 
       // ---- map editor: tools ----
@@ -1462,6 +1532,7 @@
       case 'map:toggle': { const m = state.bundle.mappings[i]; if (state.sel.has(m)) state.sel.delete(m); else state.sel.add(m); if (state.sel.size === 1) state.mi = state.bundle.mappings.indexOf([...state.sel][0]); render(); return; }
       case 'grp:toggle': { const tpl = ctx.el.dataset.tpl; const q = state.mSearch.toLowerCase(); const ids = new Set(state.bundle.templates.map((t) => t.id)); let items = state.bundle.mappings.filter((m) => tpl === '__orphan__' ? !ids.has(m.template) : m.template === tpl); if (q) items = items.filter((m) => m.id.toLowerCase().includes(q) || (m.template || '').toLowerCase().includes(q)); const allSel = items.length > 0 && items.every((m) => state.sel.has(m)); items.forEach((m) => { if (allSel) state.sel.delete(m); else state.sel.add(m); }); if (state.sel.size === 1) state.mi = state.bundle.mappings.indexOf([...state.sel][0]); render(); return; }
       case 'sel:clear': state.sel.clear(); render(); return;
+      case 'grp:editAll': { const tpl = ctx.el.dataset.tpl; const q2 = state.mSearch.toLowerCase(); const ids = new Set(state.bundle.templates.map((t) => t.id)); let items = state.bundle.mappings.filter((m) => tpl === '__orphan__' ? !ids.has(m.template) : m.template === tpl); if (q2) items = items.filter((m) => m.id.toLowerCase().includes(q2) || (m.template || '').toLowerCase().includes(q2)); if (!items.length) return; state.sel = new Set(items); state.mi = state.bundle.mappings.indexOf(items[0]); render(); toast('Bulk edit', items.length + ' mapping' + (items.length === 1 ? '' : 's') + ' of "' + (tpl === '__orphan__' ? 'orphans' : tpl) + '" selected — edit any field to change them all.', 'success'); return; }
       case 'bulk:del': { const n = state.sel.size; if (!n) return; if (!confirm('Delete ' + n + ' selected mapping' + (n === 1 ? '' : 's') + '?')) return; state.bundle.mappings = state.bundle.mappings.filter((m) => !state.sel.has(m)); state.sel.clear(); if (state.mi >= state.bundle.mappings.length) state.mi = Math.max(0, state.bundle.mappings.length - 1); persist(); render(); toast('Deleted', n + ' removed', 'success'); return; }
       case 'bulk:fill': { const sel = [...state.sel]; const used = [...new Set(sel.map((m) => m.template))]; if (used.length !== 1) { toast('Mixed templates', 'Select mappings of one template.', 'error'); return; } const tpl = state.bundle.templates.find((t) => t.id === used[0]); if (!tpl) { toast('Unknown template', '', 'error'); return; } const keys = allPlaceholders(tpl); let added = 0; sel.forEach((m) => { const have = new Set(m.entries.map((e) => e.key)); keys.forEach((k) => { if (!have.has(k)) { m.entries.push({ key: k, value: '' }); added++; } }); }); persist(); render(); toast(added ? 'Added ' + added + ' entries' : 'Already complete', '', 'success'); return; }
       case 'map:dup': {
@@ -1597,7 +1668,7 @@
 
   function openExport() {
     if (state.editingSample) { doDownloadSingle(); return; }
-    if (state.view === 'map' && state.map) reconcileGraphsAfterMapEdit();
+    if (state.view === 'map' && state.map) { reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) { const sy = syncBundlesWithMap(); if (sy.added || sy.removed) toast('Mappings synced', '+' + sy.added + ' new · −' + sy.removed + ' stale', 'success'); state.mapEd._dirty = false; persist(); } }
     if (!state.graphs.length && !state.map) { toast('Nothing to export', 'Load or create a map first.', 'error'); return; }
     state.exportSel = new Set(state.graphs.map((_, i) => i).filter((i) => !state.graphs[i].noRouteTemplate));
     state.exportDeps = state.deps.length > 0;
@@ -2533,7 +2604,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

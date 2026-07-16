@@ -60,9 +60,31 @@ THE FLOW
    belongs to the active graph. Existing mappings are kept;
    only missing ones are added. Review the values afterwards.
 
+   STATION VALUES ARE COMPUTED FROM THE MAP GEOMETRY: for
+   pickup/dropoff templates, containerX / containerY are filled
+   with the station's position converted into the graph's LOCAL
+   coordinates, and containerTheta / mapTheta with the direction
+   from the access node to the station (rounded to 2 decimals).
+   All other values come from the first existing mapping of that
+   template (the sample), as before.
+
+   AUTO-SYNC: once a graph has generated (or loaded) mappings,
+   they stay in step with the map by themselves - when you come
+   back from the map editor after changing the map, new edges /
+   stations / nodes get their mappings added and mappings whose
+   map element was deleted are removed (a toast shows +added /
+   -removed). Your hand-edited values on surviving mappings are
+   never touched. Graphs where you never generated any mappings
+   are left alone.
+
 4. DUPLICATE WITH A COUNT (Mappings tab)
    Each mapping has a "x N" box next to its Duplicate button.
    Set how many copies you want, then click Duplicate.
+   MASS EDIT: the wand button on a template's group header
+   selects ALL mappings of that template and opens the bulk
+   editor - type in any field to set it on every one at once
+   (the header checkbox + row checkboxes still work for picking
+   a subset).
 
 5. EXPORT
    "Export" opens a checklist: the full map (.json), the

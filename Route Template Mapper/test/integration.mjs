@@ -642,6 +642,75 @@ console.log('\n[P] Node covered by a station — edge / deps / waiting / access 
   w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
 }
 
+// ============================ Q) v1.4: auto-sync, Edit-all, Tusk geometry values ============================
+console.log('\n[Q] Auto-sync after map edits · Edit-all · Tusk container values from geometry');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  const api = w.__rtm, s = api.state;
+  const KUKA = 'KMP 400P-1-5G diffDrive';
+
+  // --- Tusk geometry values: regenerate the T1 dropoff/pickup mappings ---
+  click(qa(w, '.graph-pill')[1], w); // tusk graph
+  const tuskG = s.graphs[1];
+  tuskG.bundle.mappings = tuskG.bundle.mappings.filter((m) => !/^TUSK_(PICKUP|DROPOFF)_0003_mapping$/.test(m.id));
+  api.generateFromMap(tuskG);
+  const drop = tuskG.bundle.mappings.find((m) => m.id === 'TUSK_DROPOFF_0003_mapping');
+  const pick = tuskG.bundle.mappings.find((m) => m.id === 'TUSK_PICKUP_0003_mapping');
+  const ev = (m, k) => (m.entries.find((e) => e.key === k) || {}).value;
+  ok('regenerated T1 dropoff exists', !!drop && !!pick);
+  ok('containerX = station T1 in tusk LOCAL frame (20.5)', ev(drop, 'DROP_CONTAINERX_A') === '20.5' && ev(pick, 'PICK_CONTAINERX_A') === '20.5', ev(drop, 'DROP_CONTAINERX_A'));
+  ok('containerY = 7.1', ev(drop, 'DROP_CONTAINERY_A') === '7.1' && ev(pick, 'PICK_CONTAINERY_A') === '7.1', ev(drop, 'DROP_CONTAINERY_A'));
+  ok('containerTheta = node→station direction (0)', ev(drop, 'DROP_CONTAINERTHETA_A') === '0' && ev(pick, 'PICK_CONTAINERTHETA_A') === '0', ev(drop, 'DROP_CONTAINERTHETA_A'));
+  ok('mapTheta matches (0)', ev(drop, 'MAPTHETA_A') === '0');
+  ok('constants still come from the sample mapping', ev(drop, 'DROP_CONTAINERTYPEID_A') === '1' && ev(drop, 'DROP_ONLYFORK_A') === 'true' && ev(drop, 'detectBeforeDrop_1') === 'false', JSON.stringify(drop.entries));
+  ok('external station id filled (T1)', ev(drop, 'DROP_EXTERNAL_STATION_ID_A') === 'T1');
+  // T2 (node 0013 below the station → theta -1.57) — regenerate it too
+  tuskG.bundle.mappings = tuskG.bundle.mappings.filter((m) => m.id !== 'TUSK_DROPOFF_0013_mapping');
+  api.generateFromMap(tuskG);
+  const drop2 = tuskG.bundle.mappings.find((m) => m.id === 'TUSK_DROPOFF_0013_mapping');
+  ok('T2 containerTheta/mapTheta = -1.57', ev(drop2, 'DROP_CONTAINERTHETA_A') === '-1.57' && ev(drop2, 'MAPTHETA_A') === '-1.57', ev(drop2, 'DROP_CONTAINERTHETA_A'));
+  ok('T2 containerX/Y = station in local frame (10.2 / 2.95)', ev(drop2, 'DROP_CONTAINERX_A') === '10.2' && ev(drop2, 'DROP_CONTAINERY_A') === '2.95', ev(drop2, 'DROP_CONTAINERX_A') + '/' + ev(drop2, 'DROP_CONTAINERY_A'));
+
+  // --- auto-sync: add an edge on the map → mapping appears; delete it → mapping goes ---
+  click(qa(w, '.graph-pill')[0], w); // kuka graph (13 mappings out of 21 edges initially)
+  const kukaG = s.graphs[0];
+  const kukaMap = s.map.navigationGraphs.find((g) => g.id === KUKA);
+  const nBefore = kukaG.bundle.mappings.length;
+  click(q(w, '[data-act="mapEdit"]'), w);
+  api.addEdge(kukaMap, '2', '7'); w.__rtm.state.mapEd._dirty = true;
+  click(q(w, '[data-act="route"]'), w);
+  ok('returning from map edit auto-adds mappings (incl. the new edge, both directions)',
+     kukaG.bundle.mappings.some((m) => m.id === 'kuka_edge_2_7_mapping') && kukaG.bundle.mappings.some((m) => m.id === 'kuka_edge_7_2_mapping'),
+     kukaG.bundle.mappings.length + ' vs ' + nBefore);
+  ok('auto-sync also filled the other missing edges (full coverage: 23 edges)', kukaG.bundle.mappings.length === kukaMap.edges.length, kukaG.bundle.mappings.length + '/' + kukaMap.edges.length);
+  // hand-edit one mapping, delete the edge on the map → its mappings are pruned, edits elsewhere survive
+  const handEdited = kukaG.bundle.mappings.find((m) => m.id === 'kuka_edge_1_10_mapping');
+  handEdited.entries.find((e) => e.key === 'A').value = '1'; // no-op edit, marker value stays
+  click(q(w, '[data-act="mapEdit"]'), w);
+  kukaMap.edges = kukaMap.edges.filter((e) => !(e.startNodeId === '2' && e.endNodeId === '7') && !(e.startNodeId === '7' && e.endNodeId === '2'));
+  w.__rtm.state.mapEd._dirty = true;
+  click(q(w, '[data-act="route"]'), w);
+  ok('deleting the edge removes its mappings on return', !kukaG.bundle.mappings.some((m) => /kuka_edge_(2_7|7_2)_mapping/.test(m.id)));
+  ok('other mappings survive the prune untouched', kukaG.bundle.mappings.some((m) => m.id === 'kuka_edge_1_10_mapping') && kukaG.bundle.mappings.length === kukaMap.edges.length, kukaG.bundle.mappings.length + '');
+  // graphs with zero mappings are left alone
+  const blankBefore = tuskG.bundle.mappings.length; // tusk untouched by kuka syncs
+  ok('non-dirty / other graphs unaffected', tuskG.bundle.mappings.length === blankBefore);
+
+  // --- Edit all: one click selects every mapping of a template and opens the bulk editor ---
+  click(q(w, '[data-act="tab"][data-tab="mappings"]'), w);
+  const editAll = q(w, '[data-act="grp:editAll"][data-tpl="kuka_edge"]');
+  ok('template group header has an Edit-all button', !!editAll);
+  click(editAll, w);
+  ok('Edit-all selects every mapping of the template', s.sel.size === kukaG.bundle.mappings.length, s.sel.size + '');
+  ok('bulk editor opens', /Bulk editing/.test((q(w, '.detail-inner') || {}).textContent || ''));
+  // typing into a bulk entry field updates all selected mappings
+  const bulkField = q(w, '[data-bulk="entry"]');
+  if (bulkField) { bulkField.value = 'ZZ_BULK'; bulkField.dispatchEvent(new w.Event('input', { bubbles: true })); }
+  const key = bulkField && bulkField.dataset.key;
+  ok('bulk edit writes the value into every mapping', !!key && kukaG.bundle.mappings.every((m) => (m.entries.find((e) => e.key === key) || {}).value === 'ZZ_BULK'), key + '');
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);
