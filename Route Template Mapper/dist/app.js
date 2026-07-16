@@ -2238,6 +2238,16 @@
     out.sort((a, b) => (a.dist - b.dist) || ((b.type === 'node' && b.graphId === ag) - (a.type === 'node' && a.graphId === ag)));
     return out;
   }
+  // The node a click "means" for node-oriented tools (edge / dependencies / waiting / access):
+  // the hit node itself, or — when the click lands on a station/charger/light drawn over a
+  // node — the nearest node overlapping that element. Optionally restricted to one graph.
+  function nodeFromHit(hit, activeGraphId) {
+    if (!hit) return null;
+    if (hit.type === 'node') return (!activeGraphId || hit.graphId === activeGraphId) ? { graphId: hit.graphId, nodeId: hit.id } : null;
+    if (!OVERLAP_TYPES.includes(hit.type)) return null;
+    const nodes = overlapCandidates(hit).filter((c) => c.type === 'node' && (!activeGraphId || c.graphId === activeGraphId));
+    return nodes.length ? { graphId: nodes[0].graphId, nodeId: nodes[0].id } : null;
+  }
   function accessTarget(sel) {
     if (!sel) return null;
     if (sel.type === 'station') { const f = allStations().find((x) => x.st.id === sel.id); return f ? f.st : null; }
@@ -2301,12 +2311,17 @@
     if (hit) {
       const obj = { type: hit.type, id: hit.id, graphId: hit.graphId };
       if (e.shiftKey) { toggleSel(obj); ed.drag = null; paintAndInfo(); return; }
-      // dependencies / waiting-spot tools consume node clicks
-      if (hit.type === 'node' && ed.mode === 'deps') { onDepNodeClick(hit.graphId, hit.id); return; }
-      if (hit.type === 'node' && ed.mode === 'wspot') { onWsNodeClick(hit.graphId, hit.id); return; }
-      // assign access nodes by clicking — only while the matching tool (Station/Charger) is active
+      // dependencies / waiting-spot tools consume node clicks — a click on a station/charger/light
+      // drawn over a node resolves to that node too (nodeFromHit)
+      if (ed.mode === 'deps') { const nd = nodeFromHit(hit); if (nd) { onDepNodeClick(nd.graphId, nd.nodeId); return; } }
+      if (ed.mode === 'wspot') { const nd = nodeFromHit(hit); if (nd) { onWsNodeClick(nd.graphId, nd.nodeId); return; } }
+      // assign access nodes by clicking — only while the matching tool (Station/Charger) is active;
+      // clicking the selected element itself still drags it, anything else resolves to a node
       const oneSel = selOne();
-      if (hit.type === 'node' && oneSel && (oneSel.type === 'station' || oneSel.type === 'charger') && ed.mode === oneSel.type) { toggleAccessNode(oneSel, hit.graphId, hit.id); persist(); mapDirty(); paintAndInfo(); return; }
+      if (oneSel && (oneSel.type === 'station' || oneSel.type === 'charger') && ed.mode === oneSel.type && !(hit.type === oneSel.type && hit.id === oneSel.id)) {
+        const nd = nodeFromHit(hit);
+        if (nd) { toggleAccessNode(oneSel, nd.graphId, nd.nodeId); persist(); mapDirty(); paintAndInfo(); return; }
+      }
       // several objects on one spot (nodes/stations/chargers/lights) → open the picker instead of
       // guessing; if one of them is already selected (picked from the panel), treat the click as
       // that object so dragging moves the chosen one
@@ -2357,7 +2372,7 @@
     const ed = state.mapEd, g = mapGraph(), pt = svgPoint(e), hit = hitTarget(e), w = s2w(pt.x, pt.y), tool = ed.mode;
     if (tool === 'select') return;
     if (tool === 'node') { if (!g) { toast('No graph', 'Add a navigation graph first.', 'error'); return; } const local = m2g(g, w.x, w.y), id = nextNodeId(g); g.nodes.push({ id, graphX: rnd(local.x), graphY: rnd(local.y), graphZ: 0 }); setSel({ type: 'node', id, graphId: g.id }); persist(); mapDirty(); paintAndInfo(); }
-    else if (tool === 'edge') { if (hit && hit.type === 'node' && g && hit.graphId === g.id) { if (!ed.edgeFrom) ed.edgeFrom = hit.id; else if (ed.edgeFrom !== hit.id) { addEdge(g, ed.edgeFrom, hit.id); ed.edgeFrom = null; persist(); mapDirty(); } } else ed.edgeFrom = null; paintCanvas(); }
+    else if (tool === 'edge') { const nd = g && nodeFromHit(hit, g.id); if (nd) { if (!ed.edgeFrom) ed.edgeFrom = nd.nodeId; else if (ed.edgeFrom !== nd.nodeId) { addEdge(g, ed.edgeFrom, nd.nodeId); ed.edgeFrom = null; persist(); mapDirty(); } } else ed.edgeFrom = null; paintCanvas(); }
     else if (tool === 'station') { addStationAt(rnd(w.x), rnd(w.y)); persist(); mapDirty(); paintAndInfo(); }
     else if (tool === 'charger') { addPointEl('chargingStations', rnd(w.x), rnd(w.y)); persist(); mapDirty(); paintAndInfo(); }
     else if (tool === 'light') { addPointEl('trafficLights', rnd(w.x), rnd(w.y)); persist(); mapDirty(); paintAndInfo(); }
@@ -2518,7 +2533,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

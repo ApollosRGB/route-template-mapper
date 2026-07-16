@@ -588,6 +588,60 @@ console.log('\n[O] Overlapping nodes — picker to choose which node to select/e
   w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
 }
 
+// ============================ P) Node under a station — tools see through ============================
+console.log('\n[P] Node covered by a station — edge / deps / waiting / access still reach it');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  click(q(w, '[data-act="mapEdit"]'), w);
+  const api = w.__rtm, s = api.state;
+  const KUKA = 'KMP 400P-1-5G diffDrive';
+  const kuka = s.map.navigationGraphs.find((g) => g.id === KUKA);
+
+  // cover node 13 with station K1
+  const k1 = api.allStations().find((x) => x.st.id === 'K1').st;
+  const n13 = kuka.nodes.find((n) => n.id === '13');
+  const p13 = api.g2m(kuka, n13.graphX, n13.graphY);
+  k1.mapX = p13.x; k1.mapY = p13.y;
+  w.document.defaultView.dispatchEvent(new w.Event('resize'));
+  const stRect = () => q(w, 'rect[data-mt="station"][data-mid="K1"]');
+  ok('nodeFromHit resolves the station hit to the covered node', JSON.stringify(api.nodeFromHit({ type: 'station', id: 'K1' })) === JSON.stringify({ graphId: KUKA, nodeId: '13' }), JSON.stringify(api.nodeFromHit({ type: 'station', id: 'K1' })));
+
+  // EDGE tool: right-click the covering station picks the node underneath
+  click(q(w, '[data-act="mapMode"][data-mode="edge"]'), w);
+  stRect().dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true }));
+  ok('edge tool: right-click on the station starts the edge at node 13', s.mapEd.edgeFrom === '13', s.mapEd.edgeFrom + '');
+  q(w, 'circle[data-mt="node"][data-mid="2"][data-mg="' + KUKA + '"]').dispatchEvent(new w.MouseEvent('contextmenu', { bubbles: true }));
+  ok('edge 13 → 2 is created (+ reverse, bidirectional)', kuka.edges.some((e) => e.startNodeId === '13' && e.endNodeId === '2') && kuka.edges.some((e) => e.startNodeId === '2' && e.endNodeId === '13'));
+
+  // DEPENDENCIES tool: click on the station picks the node underneath as first node
+  click(q(w, '[data-act="mapMode"][data-mode="deps"]'), w);
+  stRect().dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('deps tool: click on the station makes node 13 the first node', s.deps.length === 1 && s.deps[0].fromNode === '13' && s.deps[0].fromNavigationGraph === KUKA, JSON.stringify(s.deps));
+
+  // WAITING tool: click on the station adds the node underneath
+  click(q(w, '[data-act="mapMode"][data-mode="wspot"]'), w);
+  stRect().dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  const lastWs = s.map.waitingSpots[s.map.waitingSpots.length - 1];
+  ok('waiting tool: click on the station puts node 13 into a spot', lastWs.nodes.some((n) => n.navigationGraphId === KUKA && n.nodeId === '13'), JSON.stringify(lastWs));
+
+  // ACCESS NODES: with another station selected (Station tool), clicking the covering station toggles node 13
+  click(q(w, '[data-act="mapMode"][data-mode="station"]'), w);
+  s.mapEd.selset = [{ type: 'station', id: 'K2' }];
+  stRect().dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  const k2 = api.allStations().find((x) => x.st.id === 'K2').st;
+  ok('access nodes: clicking the covering station assigns node 13 to K2', (k2.accessNodes || []).some((a) => a.navigationGraphId === KUKA && a.nodeId === '13'), JSON.stringify(k2.accessNodes));
+  ok('K2 stayed selected', s.mapEd.selset.length === 1 && s.mapEd.selset[0].id === 'K2');
+  // clicking the SELECTED station itself still starts a drag (doesn't toggle access)
+  s.mapEd.selset = [{ type: 'station', id: 'K1' }];
+  q(w, 'rect[data-mt="station"][data-mid="K1"]').dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  ok('clicking the selected station itself still drags it', s.mapEd.drag && s.mapEd.drag.kind === 'move' && s.mapEd.drag.items[0].r.el === k1);
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

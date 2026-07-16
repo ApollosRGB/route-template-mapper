@@ -105,6 +105,11 @@ back (your existing template work is kept where graphs still match).
       of them with their type. Click the one you mean (dragging
       then moves that one), or use its pencil button to edit it
       directly. Nothing is dragged by accident on that first click.
+      The node tools also SEE THROUGH cover: with the Edge,
+      Dependencies or Waiting tool (or when assigning access
+      nodes), clicking a station/charger/light that covers a node
+      acts on the node underneath - so a node overlapped by a
+      station can still get edges, dependencies and waiting spots.
     * ACCESS NODES: pick the Station tool, select a station, then
       left-click nodes to add/remove them as that station's access
       nodes (a green dashed line + ring marks each one; the station
