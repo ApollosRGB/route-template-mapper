@@ -712,3 +712,11 @@ input:focus, select:focus, textarea:focus { border-color: hsl(var(--ring) / .8);
 .ov-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ov-main b { font-size: 12.5px; }
 .ov-main span { font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* per-type icons in the overlap picker */
+.ov-icon { display: inline-flex; flex-shrink: 0; }
+.ov-icon svg { width: 15px; height: 15px; }
+.ov-icon.node { color: #2563eb; }
+.ov-icon.station { color: #0d9488; }
+.ov-icon.charger { color: #dc2626; }
+.ov-icon.light { color: #f59e0b; }

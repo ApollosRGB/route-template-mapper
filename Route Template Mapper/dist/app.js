@@ -1341,9 +1341,9 @@
       case 'mapClearSel': { state.mapEd.selset = []; state.mapEd.overlap = null; render(); return; }
       case 'viewMenu': { state.mapEd.viewMenu = !state.mapEd.viewMenu; render(); return; }
 
-      // ---- overlapping-nodes picker ----
-      case 'ovSelect': { setSel({ type: 'node', id: ctx.el.dataset.n, graphId: ctx.el.dataset.g }); render(); return; }
-      case 'ovEdit': { state.mapEd.overlap = null; openMapDialogFor({ type: 'node', id: ctx.el.dataset.n, graphId: ctx.el.dataset.g }); return; }
+      // ---- overlapping-objects picker ----
+      case 'ovSelect': { setSel({ type: ctx.el.dataset.t, id: ctx.el.dataset.n, graphId: ctx.el.dataset.g || undefined }); render(); return; }
+      case 'ovEdit': { state.mapEd.overlap = null; openMapDialogFor({ type: ctx.el.dataset.t, id: ctx.el.dataset.n, graphId: ctx.el.dataset.g || undefined }); return; }
       case 'ovClose': { state.mapEd.overlap = null; render(); return; }
       case 'resetView': { const svg = document.getElementById('map-svg'); const st = svg ? svg.parentElement : null; fitView(st ? st.clientWidth : 800, st ? st.clientHeight : 600); paintCanvas(); return; }
       case 'mapEditSel': { const o = selOne(); if (o) openMapDialogFor(o); return; }
@@ -1656,18 +1656,23 @@
       '<div id="map-info" class="map-info">' + mapInfoInner() + '</div>' +
       '<div id="map-readout" class="map-readout">x —   y —</div></div>';
   }
-  // Picker shown when several nodes share (≈) one position — choose which one you mean.
+  // Picker shown when several map objects share (≈) one position — choose which one you mean.
   function overlapPanelHTML() {
     const ov = state.mapEd.overlap; if (!ov) return '';
-    const rows = ov.items.map((c) =>
-      '<div class="ov-item' + (isSel('node', c.nodeId, c.graphId) ? ' active' : '') + '" data-act="ovSelect" data-g="' + esc(c.graphId) + '" data-n="' + esc(c.nodeId) + '">' +
-        '<span class="li-dot node"></span>' +
-        '<div class="ov-main"><b class="mono">' + esc(c.nodeId) + '</b><span class="muted">' + esc(c.graphId) + '</span></div>' +
-        '<button class="btn btn-ghost btn-icon btn-sm" data-act="ovEdit" data-g="' + esc(c.graphId) + '" data-n="' + esc(c.nodeId) + '" title="Edit this node">' + I.wand + '</button>' +
-      '</div>').join('');
-    return '<div class="side-head">' + I.node + '<b>' + ov.items.length + ' nodes at this spot</b>' +
+    const typeIcon = { node: I.node, station: I.box, charger: I.bolt, light: I.bulb };
+    const typeName = { node: '', station: 'handling station', charger: 'charging station', light: 'traffic light' };
+    const rows = ov.items.map((c) => {
+      const dataAttrs = ' data-t="' + esc(c.type) + '" data-n="' + esc(c.id) + '"' + (c.graphId ? ' data-g="' + esc(c.graphId) + '"' : '');
+      const sub = c.type === 'node' ? c.graphId : typeName[c.type];
+      return '<div class="ov-item ' + esc(c.type) + (isSel(c.type, c.id, c.graphId) ? ' active' : '') + '" data-act="ovSelect"' + dataAttrs + '>' +
+        '<span class="ov-icon ' + esc(c.type) + '">' + (typeIcon[c.type] || I.node) + '</span>' +
+        '<div class="ov-main"><b class="mono">' + esc(c.id) + '</b><span class="muted">' + esc(sub) + '</span></div>' +
+        '<button class="btn btn-ghost btn-icon btn-sm" data-act="ovEdit"' + dataAttrs + ' title="Edit this ' + esc(c.type === 'node' ? 'node' : typeName[c.type]) + '">' + I.wand + '</button>' +
+      '</div>';
+    }).join('');
+    return '<div class="side-head">' + I.node + '<b>' + ov.items.length + ' objects at this spot</b>' +
         '<button class="btn btn-ghost btn-icon btn-sm" data-act="ovClose" title="Close">✕</button></div>' +
-      '<div class="side-hint muted">These nodes overlap (within 0.1 m). Click one to select it — drag on the map then moves it — or use ' + I.wand + ' to edit it directly.</div>' +
+      '<div class="side-hint muted">These objects overlap here. Click one to select it — drag on the map then moves it — or use ' + I.wand + ' to edit it directly.</div>' +
       '<div class="side-list">' + rows + '</div>';
   }
   // ---- docked side panel: reservation dependencies (deps tool) ----
@@ -2207,20 +2212,30 @@
     return null;
   }
   function nodeMapPos(graphId, nodeId) { const g = (state.map.navigationGraphs || []).find((x) => x.id === graphId); if (!g) return null; const n = nodeById(g, nodeId); return n ? g2m(g, n.graphX, n.graphY) : null; }
-  // All nodes (any graph) within `radius` metres of the given node's map position — active graph first, then nearest.
-  // Default radius: 0.1 m, but never more than ~12 px at the current zoom, so nodes that are
-  // clearly separate on screen (high zoom) don't trigger the picker.
-  function overlapCandidates(graphId, nodeId, radius) {
+  // Map-frame position of any point-like element (node / station / charger / light).
+  function elMapPos(type, id, graphId) {
+    if (type === 'node') return nodeMapPos(graphId, id);
+    if (type === 'station') { const f = allStations().find((x) => x.st.id === id); return f ? { x: f.st.mapX, y: f.st.mapY } : null; }
+    if (type === 'charger') { const c = (state.map.chargingStations || []).find((x) => x.id === id); return c ? { x: c.mapX, y: c.mapY } : null; }
+    if (type === 'light') { const l = (state.map.trafficLights || []).find((x) => x.id === id); return l ? { x: l.mapX, y: l.mapY } : null; }
+    return null;
+  }
+  const OVERLAP_TYPES = ['node', 'station', 'charger', 'light'];
+  // All point objects — nodes of any graph, stations, chargers, traffic lights — within `radius`
+  // metres of the clicked element. Default radius: 0.1 m, but never more than ~12 px at the current
+  // zoom, so objects that are clearly separate on screen (high zoom) don't trigger the picker.
+  // Nearest first; on ties, active-graph nodes first.
+  function overlapCandidates(hit, radius) {
     const r = radius == null ? Math.min(0.1, 12 / ((state.mapEd.view && state.mapEd.view.zoom) || 30)) : radius;
-    const p0 = nodeMapPos(graphId, nodeId); if (!p0) return [];
+    const p0 = elMapPos(hit.type, hit.id, hit.graphId); if (!p0) return [];
     const out = [];
-    (state.map.navigationGraphs || []).forEach((g) => (g.nodes || []).forEach((n) => {
-      const p = g2m(g, n.graphX, n.graphY);
-      const d = Math.hypot(p.x - p0.x, p.y - p0.y);
-      if (d <= r) out.push({ graphId: g.id, nodeId: n.id, dist: d });
-    }));
+    const add = (type, id, graphId, p) => { const d = Math.hypot(p.x - p0.x, p.y - p0.y); if (d <= r) out.push({ type, id, graphId, dist: d }); };
+    (state.map.navigationGraphs || []).forEach((g) => (g.nodes || []).forEach((n) => add('node', n.id, g.id, g2m(g, n.graphX, n.graphY))));
+    allStations().forEach(({ st }) => add('station', st.id, undefined, { x: st.mapX, y: st.mapY }));
+    (state.map.chargingStations || []).forEach((c) => add('charger', c.id, undefined, { x: c.mapX, y: c.mapY }));
+    (state.map.trafficLights || []).forEach((l) => add('light', l.id, undefined, { x: l.mapX, y: l.mapY }));
     const ag = (mapGraph() || {}).id;
-    out.sort((a, b) => ((b.graphId === ag) - (a.graphId === ag)) || (a.dist - b.dist));
+    out.sort((a, b) => (a.dist - b.dist) || ((b.type === 'node' && b.graphId === ag) - (a.type === 'node' && a.graphId === ag)));
     return out;
   }
   function accessTarget(sel) {
@@ -2292,18 +2307,19 @@
       // assign access nodes by clicking — only while the matching tool (Station/Charger) is active
       const oneSel = selOne();
       if (hit.type === 'node' && oneSel && (oneSel.type === 'station' || oneSel.type === 'charger') && ed.mode === oneSel.type) { toggleAccessNode(oneSel, hit.graphId, hit.id); persist(); mapDirty(); paintAndInfo(); return; }
-      // several nodes on one spot → open the picker instead of guessing; if one of them
-      // is already selected (picked from the panel), treat the click as that node so dragging works
-      if (hit.type === 'node') {
-        const cands = overlapCandidates(hit.graphId, hit.id);
+      // several objects on one spot (nodes/stations/chargers/lights) → open the picker instead of
+      // guessing; if one of them is already selected (picked from the panel), treat the click as
+      // that object so dragging moves the chosen one
+      if (OVERLAP_TYPES.includes(hit.type)) {
+        const cands = overlapCandidates(hit);
         if (cands.length > 1) {
-          const selCand = cands.find((c) => isSel('node', c.nodeId, c.graphId));
+          const selCand = cands.find((c) => isSel(c.type, c.id, c.graphId));
           if (!selCand) {
             ed.overlap = { items: cands };
-            setSel({ type: 'node', id: cands[0].nodeId, graphId: cands[0].graphId });
+            setSel({ type: hit.type, id: hit.id, graphId: hit.graphId });
             ed.drag = null; render(); return;
           }
-          obj.id = selCand.nodeId; obj.graphId = selCand.graphId;
+          obj.type = selCand.type; obj.id = selCand.id; obj.graphId = selCand.graphId;
         }
       }
       if (!isSelObj(obj)) setSel(obj);
@@ -2351,13 +2367,13 @@
     const ed = state.mapEd;
     if ((ed.mode === 'area' || ed.mode === 'earea') && ed.areaDraft && ed.areaDraft.length >= 3) { finishArea(); return; }
     const hit = hitTarget(e); if (!hit) return;
-    if (hit.type === 'node') {
-      const cands = overlapCandidates(hit.graphId, hit.id);
+    if (OVERLAP_TYPES.includes(hit.type)) {
+      const cands = overlapCandidates(hit);
       if (cands.length > 1) {
         // edit the candidate the user picked (selected); otherwise show the picker first
-        const selCand = cands.find((c) => isSel('node', c.nodeId, c.graphId));
-        if (selCand) openMapDialogFor({ type: 'node', id: selCand.nodeId, graphId: selCand.graphId });
-        else { ed.overlap = { items: cands }; setSel({ type: 'node', id: cands[0].nodeId, graphId: cands[0].graphId }); render(); }
+        const selCand = cands.find((c) => isSel(c.type, c.id, c.graphId));
+        if (selCand) openMapDialogFor({ type: selCand.type, id: selCand.id, graphId: selCand.graphId });
+        else { ed.overlap = { items: cands }; setSel({ type: hit.type, id: hit.id, graphId: hit.graphId }); render(); }
         return;
       }
     }
@@ -2502,7 +2518,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, nodeMapPos };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

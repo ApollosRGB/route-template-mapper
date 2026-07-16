@@ -525,8 +525,9 @@ console.log('\n[O] Overlapping nodes — picker to choose which node to select/e
   t11.graphX = loc.x; t11.graphY = loc.y;
   w.document.defaultView.dispatchEvent(new w.Event('resize')); // repaint
 
-  ok('overlapCandidates finds both nodes within 0.1 m', api.overlapCandidates(KUKA, '1').length === 2, JSON.stringify(api.overlapCandidates(KUKA, '1')));
-  ok('active graph listed first', api.overlapCandidates(KUKA, '1')[0].graphId === KUKA);
+  const hit1 = { type: 'node', id: '1', graphId: KUKA };
+  ok('overlapCandidates finds both nodes within 0.1 m', api.overlapCandidates(hit1).length === 2, JSON.stringify(api.overlapCandidates(hit1)));
+  ok('active graph listed first on exact ties', api.overlapCandidates(hit1)[0].graphId === KUKA);
 
   // clicking the shared spot opens the picker instead of silently picking one
   const el = q(w, 'circle[data-mt="node"][data-mid="1"][data-mg="' + KUKA + '"]');
@@ -557,6 +558,34 @@ console.log('\n[O] Overlapping nodes — picker to choose which node to select/e
   el3.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
   w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
   ok('normal nodes select directly without a picker', !q(w, '#map-overlap') && s.mapEd.selset[0] && s.mapEd.selset[0].id === '13');
+
+  // ---- mixed types: a station moved onto node 13 ----
+  const k1 = api.allStations().find((x) => x.st.id === 'K1').st;
+  const n13 = kuka.nodes.find((n) => n.id === '13');
+  const p13 = api.g2m(kuka, n13.graphX, n13.graphY);
+  k1.mapX = p13.x; k1.mapY = p13.y;
+  w.document.defaultView.dispatchEvent(new w.Event('resize'));
+  const mixed = api.overlapCandidates({ type: 'node', id: '13', graphId: KUKA });
+  ok('node + station on one spot are both detected', mixed.length === 2 && mixed.some((c) => c.type === 'station' && c.id === 'K1'), JSON.stringify(mixed));
+  s.mapEd.selset = []; s.mapEd.overlap = null;
+  const stEl = q(w, 'rect[data-mt="station"][data-mid="K1"]');
+  stEl.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  ok('clicking the station opens the mixed picker (no accidental drag)', !!q(w, '#map-overlap') && qa(w, '#map-overlap .ov-item').length === 2 && !s.mapEd.drag);
+  ok('entries carry their type', qa(w, '#map-overlap [data-act="ovSelect"]').some((x) => x.dataset.t === 'station') && qa(w, '#map-overlap [data-act="ovSelect"]').some((x) => x.dataset.t === 'node'));
+  click(qa(w, '[data-act="ovEdit"]').find((x) => x.dataset.t === 'node' && x.dataset.n === '13'), w);
+  ok('edit from the mixed picker opens the node dialog', s.mapEd.dialog && s.mapEd.dialog.kind === 'node' && s.mapEd.dialog.id === '13', JSON.stringify(s.mapEd.dialog));
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  // picking the station in the panel, then dragging the shared spot, moves the station not the node
+  s.mapEd.selset = []; s.mapEd.overlap = null;
+  q(w, 'rect[data-mt="station"][data-mid="K1"]').dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
+  click(qa(w, '[data-act="ovSelect"]').find((x) => x.dataset.t === 'station'), w);
+  ok('choosing the station selects it', s.mapEd.selset.length === 1 && s.mapEd.selset[0].type === 'station' && s.mapEd.selset[0].id === 'K1', JSON.stringify(s.mapEd.selset));
+  const stEl2 = q(w, 'rect[data-mt="station"][data-mid="K1"]');
+  stEl2.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 }));
+  ok('re-click drags the chosen station, not the node', s.mapEd.drag && s.mapEd.drag.kind === 'move' && s.mapEd.drag.items.length === 1 && s.mapEd.drag.items[0].r.el === k1);
+  w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true }));
 }
 
 console.log('\n──────────────────────────────');
