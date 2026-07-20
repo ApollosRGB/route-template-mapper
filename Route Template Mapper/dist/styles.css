@@ -807,3 +807,9 @@ input[type="text"], input[type="number"], select, textarea { background: hsl(var
 .sm-row { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; padding: 4px 6px 0; color: hsl(var(--muted-foreground)); }
 .sm-row b { color: hsl(var(--foreground)); font-variant-numeric: tabular-nums; }
 .sm-slider { width: calc(100% - 12px); margin: 6px 6px 8px; accent-color: hsl(var(--primary)); cursor: pointer; }
+
+/* ==== v2.0.1 fix: backdrop-filter gives every glass bar its own stacking
+   context, which let the graph/tab bars paint OVER the settings menu (and
+   the map toolbar's View dropdown). Lift the bars that own dropdowns. ==== */
+.app-header { position: relative; z-index: 70; }
+.map-toolbar { position: relative; z-index: 60; }
