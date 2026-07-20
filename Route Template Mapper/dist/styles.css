@@ -813,3 +813,55 @@ input[type="text"], input[type="number"], select, textarea { background: hsl(var
    the map toolbar's View dropdown). Lift the bars that own dropdowns. ==== */
 .app-header { position: relative; z-index: 70; }
 .map-toolbar { position: relative; z-index: 60; }
+
+/* ============================================================
+   v2.1.0 — Liquid Glass aligned with Apple guidance
+   (developer.apple.com/documentation/technologyoverviews/liquid-glass)
+   · Glass lives ONLY on the floating FUNCTIONAL layer: bars,
+     navigation, floating panels, menus, presentations.
+   · The CONTENT layer (cards, rows, lists, inputs) returns to
+     standard, near-opaque materials - no glass-on-glass.
+   · Regular variant (blur + luminosity adjustment) everywhere
+     text sits on glass; scroll-edge shadows separate the bars;
+     nested corners are concentric.
+   ============================================================ */
+
+/* content layer -> standard materials (no backdrop blur) */
+.card, .landing-card {
+  background: hsl(var(--card) / .97);
+  backdrop-filter: none;
+  box-shadow: 0 1px 3px rgba(16, 18, 45, .06), 0 8px 28px rgba(16, 18, 45, .05);
+}
+.dark .card, .dark .landing-card { box-shadow: 0 1px 3px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25); }
+.row, .subsection, .stat, .sample-item { background: hsl(var(--background) / .92); }
+.subsection-head { background: hsl(var(--muted) / .6); }
+input[type="text"], input[type="number"], select, textarea { background: hsl(var(--background) / .95); }
+.card-head { background: hsl(var(--muted) / .5); }
+
+/* functional layer keeps the glass (regular variant): bars, nav, floating panels */
+.app-header, .tabs-bar, .graph-bar, .map-toolbar, .sidebar, .app-footer, .preview-panel {
+  background: hsl(var(--card) / var(--glass-alpha));
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+}
+/* text-heavy floating panels & presentations: regular variant with a legibility floor */
+.modal, .mt-menu, .settings-menu, .map-info, .map-translate, .map-side, .map-overlap, .toast {
+  background: hsl(var(--card) / calc(var(--glass-alpha) * 0.5 + 0.5));
+  backdrop-filter: blur(calc(var(--glass-blur) + 4px)) saturate(1.4);
+}
+/* content INSIDE floating glass panels stays solid enough to read/click */
+.side-item, .ov-item { background: hsl(var(--background) / .9); }
+.graph-pill { background: hsl(var(--background) / .85); }
+
+/* scroll-edge effect: soft separation where bars meet scrolling content */
+.app-header, .tabs-bar, .graph-bar, .map-toolbar { box-shadow: 0 10px 24px -18px rgba(10, 12, 40, .45); }
+.dark .app-header, .dark .tabs-bar, .dark .graph-bar, .dark .map-toolbar { box-shadow: 0 10px 26px -16px rgba(0,0,0,.6); }
+
+/* concentric nested corners (inner radius follows outer minus inset) */
+.card { border-radius: 16px; }
+.card-head { border-radius: 16px 16px 0 0; }
+.card .row, .card .subsection { border-radius: 10px; }
+.settings-menu { border-radius: 20px; }
+.settings-menu .sm-item { border-radius: 10px; }
+.mt-menu { border-radius: 16px; }
+.modal { border-radius: 20px; }
+.landing-card { border-radius: 24px; }

@@ -269,8 +269,13 @@ Built-in samples open as a copy you re-save under a new name.
 ----------------------------------------------------------
 APPEARANCE & SETTINGS MENU (gear, top right)
 ----------------------------------------------------------
-The app uses a LIQUID GLASS look: the bars, panels and cards
-are frosted glass over an ambient background.
+The app uses a LIQUID GLASS look, following Apple's Liquid
+Glass guidance: the glass lives on the FLOATING FUNCTIONAL
+layer only (top bars, toolbars, sidebars, floating map panels,
+menus and dialogs), while the CONTENT you edit (cards, rows,
+inputs) sits on standard, near-solid surfaces - so text stays
+readable at any transparency. Text-bearing floating panels
+keep a minimum opacity for legibility.
 
 The GEAR button (top right, on every screen) opens the
 Settings menu with:
