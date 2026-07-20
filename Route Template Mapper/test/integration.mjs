@@ -883,6 +883,55 @@ console.log('\n[U] Map name before saving · picker closes when picking an outsi
   w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 }
 
+// ============================ V) v2.0: liquid glass + settings menu ============================
+console.log('\n[V] Settings menu (theme, glass slider, navigation) + liquid glass');
+{
+  const w = await boot();
+  // landing: gear present, menu closed, appearance-only
+  ok('landing has the settings gear', !!q(w, '[data-act="settings"]'));
+  ok('menu exists in DOM but starts closed', !!q(w, '#settings-menu') && !q(w, '#settings-menu.open'));
+  click(q(w, '[data-act="settings"]'), w);
+  ok('gear opens the menu', !!q(w, '#settings-menu.open'));
+  ok('landing menu has no map actions', !q(w, '#settings-menu [data-act="exportAll"]') && !q(w, '#settings-menu [data-act="home"]'));
+
+  // glass slider: default 50 % → alpha 0.5; changing updates the CSS var + saves
+  const slider = q(w, '[data-act="glass"]');
+  ok('glass slider present, default 50 %', !!slider && slider.value === '50');
+  ok('default glass alpha is 0.5', w.document.documentElement.style.getPropertyValue('--glass-alpha') === '0.5', w.document.documentElement.style.getPropertyValue('--glass-alpha'));
+  slider.value = '80'; slider.dispatchEvent(new w.Event('input', { bubbles: true }));
+  ok('slider updates the glass alpha live (80 % → 0.2)', w.document.documentElement.style.getPropertyValue('--glass-alpha') === '0.2');
+  ok('glass setting is saved', w.localStorage.getItem('routeTemplateMapper.glass') === '80');
+  ok('percent label follows', q(w, '#glass-val').textContent === '80%');
+
+  // theme item lives in the menu now
+  const wasDark = w.document.documentElement.classList.contains('dark');
+  click(q(w, '#settings-menu [data-act="theme"]'), w);
+  ok('theme toggles from the settings menu', w.document.documentElement.classList.contains('dark') === !wasDark);
+
+  // outside click closes the menu
+  click(q(w, '[data-act="settings"]'), w); // (re-render closed it? ensure open)
+  if (!q(w, '#settings-menu.open')) click(q(w, '[data-act="settings"]'), w);
+  ok('menu is open before the outside click', !!q(w, '#settings-menu.open'));
+  w.document.body.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  ok('clicking anywhere else closes the menu', !q(w, '#settings-menu.open'));
+
+  // route view: menu carries Map editor / Main menu / Export / Preview
+  click(q(w, '[data-act="loadExample"]'), w);
+  ok('route-view menu: Map editor + Main menu + Export + Preview, no Route templates',
+     !!q(w, '#settings-menu [data-act="mapEdit"]') && !!q(w, '#settings-menu [data-act="home"]') &&
+     !!q(w, '#settings-menu [data-act="exportAll"]') && !!q(w, '#settings-menu [data-act="preview"]') &&
+     !q(w, '#settings-menu [data-act="route"]'));
+  ok('old standalone header buttons are gone (all consolidated)', qa(w, '.app-header [data-act="exportAll"]').length === 1 && qa(w, '.app-header [data-act="theme"]').length === 1);
+
+  // choosing a navigation item closes the menu and navigates
+  click(q(w, '[data-act="settings"]'), w);
+  ok('menu open in route view', !!q(w, '#settings-menu.open'));
+  click(q(w, '#settings-menu [data-act="mapEdit"]'), w);
+  const s = w.__rtm.state;
+  ok('menu item navigates to the map editor and closes the menu', s.view === 'map' && !s.settingsMenu);
+  ok('map-view menu offers Route templates instead of Map editor', !!q(w, '#settings-menu [data-act="route"]') && !q(w, '#settings-menu [data-act="mapEdit"]'));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

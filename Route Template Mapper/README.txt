@@ -25,9 +25,9 @@ arm64 = Apple Silicon M1/M2/M3..., intel = older Intel Macs)
 
 Your work auto-saves on this PC, so closing and re-opening the
 app keeps your last session (use "Resume last session"). The
-"Menu" (house) button in the top bar of the editors also takes
-you back to this start screen at any time - your work is saved
-first, so "Resume last session" brings it right back.
+"Main menu" option in the Settings menu (gear, top right) also
+takes you back to this start screen at any time - your work is
+saved first, so "Resume last session" brings it right back.
 
 ----------------------------------------------------------
 THE FLOW
@@ -267,10 +267,21 @@ you saved, and lets you open one in the editor to check/edit it.
 Built-in samples open as a copy you re-save under a new name.
 
 ----------------------------------------------------------
-APPEARANCE
+APPEARANCE & SETTINGS MENU (gear, top right)
 ----------------------------------------------------------
-Dark mode is on by default; use the Light/Dark button (top
-right) to switch. Your choice is remembered.
+The app uses a LIQUID GLASS look: the bars, panels and cards
+are frosted glass over an ambient background.
+
+The GEAR button (top right, on every screen) opens the
+Settings menu with:
+- Light / Dark mode (dark is the default; remembered)
+- GLASS TRANSPARENCY slider (default 50%) - how see-through
+  the glass surfaces are; 0% = solid. Remembered on this PC.
+- Navigate: Route templates / Map editor / Main menu
+- Actions: Preview JSON and Export...
+The menu closes when you click anywhere else, press Esc, or
+pick a navigation/action item. Ctrl+S still opens Export and
+Ctrl+O still opens a map.
 
 ----------------------------------------------------------
 SHARING THE APP

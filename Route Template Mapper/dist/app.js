@@ -8,6 +8,7 @@
   // ---------------------------------------------------------------- constants
   const SESSION_KEY = 'routeTemplateMapper.session.v1';
   const THEME_KEY = 'routeTemplateMapper.theme';
+  const GLASS_KEY = 'routeTemplateMapper.glass'; // liquid-glass translucency (0–90 %)
   const USER_SAMPLES_KEY = 'routeTemplateMapper.userSamples.v1';
   const DATA_TYPES = ['string', 'number', 'boolean'];
   const BLOCKING_TYPES = ['HARD', 'SOFT', 'NONE'];
@@ -47,6 +48,7 @@
     target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="2"/></svg>',
     clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.8 12 3l9 7.8"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01A1.7 1.7 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01c.26.63.87 1.04 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.94z"/></svg>',
     link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 10a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>'
   };
@@ -74,6 +76,8 @@
     exportSel: new Set(), // graph indices selected for export
     exportMap: true,      // include the map file in the export
     exportDeps: true,     // include the reservation-dependencies file in the export
+    settingsMenu: false,  // gear dropdown (theme, glass, navigation, export…) open
+    glass: 50,            // liquid-glass translucency in % (0 = solid, 90 = most transparent)
 
     deps: [],             // reservation dependencies: [{ fromNode, fromNavigationGraph, to: [{ navigationGraph, nodes[] }] }]
 
@@ -863,9 +867,40 @@
     }
   }
 
-  function themeBtn() {
+  // ---- liquid-glass translucency (v2.0) ----
+  function applyGlass() { document.documentElement.style.setProperty('--glass-alpha', String(Math.round(100 - state.glass) / 100)); }
+  function loadGlass() {
+    const v = parseInt(localStorage.getItem(GLASS_KEY), 10);
+    state.glass = Number.isFinite(v) ? Math.max(0, Math.min(90, v)) : 50;
+    applyGlass();
+  }
+  function saveGlass() { try { localStorage.setItem(GLASS_KEY, String(state.glass)); } catch (e) {} }
+
+  // ---- settings menu (gear) — theme, glass slider, navigation, export/preview ----
+  // The menu is ALWAYS rendered (CSS hides it unless .open) so its actions stay addressable.
+  function settingsBtn() {
+    return '<div class="settings-wrap"><button class="btn btn-icon ' + (state.settingsMenu ? 'btn-secondary' : 'btn-ghost') + '" data-act="settings" title="Settings">' + I.gear + '</button>' + settingsMenuHTML() + '</div>';
+  }
+  function settingsMenuHTML() {
     const dark = document.documentElement.classList.contains('dark');
-    return btn('theme', dark ? I.sun : I.moon, dark ? 'Light' : 'Dark', 'btn-outline', 'Toggle light/dark mode');
+    const inMap = state.view === 'map' && state.map;
+    const inRoute = state.view !== 'map' && !state.editingSample && !!state.map;
+    const item = (act, icon, label) => '<button class="sm-item" data-act="' + act + '">' + icon + '<span>' + esc(label) + '</span></button>';
+    let nav = '';
+    if (inMap) nav += item('route', I.layers, 'Route templates');
+    if (inRoute) nav += item('mapEdit', I.map, 'Map editor');
+    if (state.map || state.editingSample) nav += item('home', I.home, 'Main menu');
+    const actions = (state.map || state.editingSample)
+      ? item('preview', I.code, inMap ? 'Preview map JSON' : 'Preview JSON') + item('exportAll', I.download, 'Export…')
+      : '';
+    return '<div id="settings-menu" class="settings-menu' + (state.settingsMenu ? ' open' : '') + '">' +
+      '<div class="sm-h">Appearance</div>' +
+      item('theme', dark ? I.sun : I.moon, dark ? 'Light mode' : 'Dark mode') +
+      '<div class="sm-row"><span>Glass transparency</span><b id="glass-val">' + state.glass + '%</b></div>' +
+      '<input class="sm-slider" type="range" min="0" max="90" step="5" data-act="glass" value="' + state.glass + '" title="How see-through the glass surfaces are" />' +
+      (nav ? '<div class="sm-h">Navigate</div>' + nav : '') +
+      (actions ? '<div class="sm-h">Actions</div>' + actions : '') +
+      '</div>';
   }
 
   // -------------------------------------------------------------- landing
@@ -876,8 +911,9 @@
     return '<header class="app-header">' +
         '<div class="brand"><div class="logo">' + I.logo + '</div>' +
         '<div class="brand-text"><h1>Route Template Mapper</h1><p>Read a map · match navigation graphs · edit & export route templates</p></div></div>' +
-        '<div class="header-spacer"></div><div class="header-actions">' + themeBtn() +
+        '<div class="header-spacer"></div><div class="header-actions">' +
         btn('samples', I.box, 'Sample templates', 'btn-ghost', 'Check & edit the built-in / saved route templates') +
+        settingsBtn() +
         '</div></header>' +
       '<div class="landing">' +
         '<div class="landing-card">' +
@@ -899,20 +935,15 @@
   // -------------------------------------------------------------- header
   function headerHTML() {
     const actions = state.editingSample
-      ? themeBtn() +
-        btn('samples', I.box, 'Samples', 'btn-ghost', 'Check & edit sample route templates') +
-        btn('preview', I.code, 'Preview JSON', state.preview ? 'btn-secondary' : 'btn-ghost') +
+      ? btn('samples', I.box, 'Samples', 'btn-ghost', 'Check & edit sample route templates') +
         btn('sample:saveAs', I.save, 'Save as sample', 'btn-outline') +
         btn('sample:download', I.download, 'Download', 'btn-primary') +
-        btn('sample:close', I.open, 'Close', 'btn-ghost')
-      : btn('home', I.home, 'Menu', 'btn-ghost', 'Back to the start screen — your work is auto-saved') +
-        themeBtn() +
-        btn('samples', I.box, 'Samples', 'btn-ghost', 'Check & edit sample route templates') +
+        btn('sample:close', I.open, 'Close', 'btn-ghost') +
+        settingsBtn()
+      : btn('samples', I.box, 'Samples', 'btn-ghost', 'Check & edit sample route templates') +
         btn('loadMap', I.open, 'Load map', 'btn-ghost', 'Load a different map') +
-        btn('mapEdit', I.map, 'Map edit', 'btn-ghost', 'Open the visual map editor') +
-        btn('preview', I.code, 'Preview JSON', state.preview ? 'btn-secondary' : 'btn-ghost') +
         btn('graph:saveSample', I.save, 'Save as sample', 'btn-outline') +
-        btn('exportAll', I.download, 'Export', 'btn-primary');
+        settingsBtn();
     return '<header class="app-header">' +
         '<div class="brand"><div class="logo">' + I.logo + '</div>' +
           '<div class="brand-text"><h1>Route Template Mapper</h1>' +
@@ -1422,6 +1453,8 @@
       case 'loadExample': loadMapData(clone(window.EXAMPLE_MAP), 'example map'); return;
       case 'resume': { const sess = loadSession(); if (sess) { state.map = normalizeMap(sess.map); state.mapName = sess.mapName || 'map'; state.graphs = sess.graphs; state.gi = sess.gi || 0; state.deps = normalizeDeps(sess.deps); state.editingSample = null; resetEditState(); if (sess.mapEd) { if (Number.isFinite(sess.mapEd.decimals)) state.mapEd.decimals = sess.mapEd.decimals; state.mapEd.ungroupedStations = Array.isArray(sess.mapEd.ungroupedStations) ? sess.mapEd.ungroupedStations : []; state.mapEd.bg = sess.mapEd.bg || null; } state.view = 'route'; state.mapEd._fitted = false; const nUp = refreshAllStationValues(); if (nUp) { persist(); } render(); if (nUp) toast('Station values refreshed', nUp + ' mapping(s) updated (containerX/Y, theta, missing constants defaulted).', 'success'); } return; }
       case 'theme': toggleTheme(); return;
+      case 'settings': { state.settingsMenu = !state.settingsMenu; render(); return; }
+      case 'glass': { const t2 = Math.max(0, Math.min(90, parseInt(ctx.el.value, 10) || 0)); state.glass = t2; applyGlass(); saveGlass(); const gv = document.getElementById('glass-val'); if (gv) gv.textContent = t2 + '%'; return; }
       case 'home': {
         // Back to the start screen. Work is saved first, so "Resume last session" restores it.
         if (state.view === 'map' && state.map) { reconcileGraphsAfterMapEdit(); if (state.mapEd._dirty) syncBundlesWithMap(); }
@@ -1871,13 +1904,7 @@
   function mapHeaderHTML() {
     return '<header class="app-header"><div class="brand"><div class="logo">' + I.logo + '</div>' +
       '<div class="brand-text"><h1>Map editor</h1><p>' + esc(state.mapName || 'untitled map') + '</p></div></div>' +
-      '<div class="header-spacer"></div><div class="header-actions">' +
-        btn('home', I.home, 'Menu', 'btn-ghost', 'Back to the start screen — your work is auto-saved') +
-        themeBtn() +
-        btn('route', I.layers, 'Route templates', 'btn-ghost', 'Back to route-template editor') +
-        btn('preview', I.code, 'Preview map', state.preview ? 'btn-secondary' : 'btn-ghost') +
-        btn('exportAll', I.download, 'Export', 'btn-primary') +
-      '</div></header>';
+      '<div class="header-spacer"></div><div class="header-actions">' + settingsBtn() + '</div></header>';
   }
   function mapToolbarHTML() {
     const ed = state.mapEd, graphs = state.map.navigationGraphs || [];
@@ -2618,6 +2645,7 @@
   // -------------------------------------------------------------------- wire-up
   function init() {
     loadTheme();
+    loadGlass();
     render();
 
     document.addEventListener('click', (e) => {
@@ -2625,10 +2653,13 @@
       // (their toggle buttons are excluded here so their own click still toggles them closed)
       let closed = false;
       if (state.mapEd.viewMenu && !e.target.closest('#view-menu') && !e.target.closest('[data-act="viewMenu"]')) { state.mapEd.viewMenu = false; closed = true; }
+      if (state.settingsMenu && !e.target.closest('#settings-menu') && !e.target.closest('[data-act="settings"]')) { state.settingsMenu = false; closed = true; }
       if (state.mapEd.translatePanel && !e.target.closest('.map-translate') && !e.target.closest('.modal-overlay') && !e.target.closest('[data-act="graphTranslate"]')) { state.mapEd.translatePanel = false; closed = true; }
       if (closed) render();
       const t = e.target.closest('[data-act]');
       if (!t) return;
+      // choosing a navigation/action item inside the settings menu closes the menu
+      if (state.settingsMenu && t.closest('#settings-menu') && ['route', 'mapEdit', 'home', 'exportAll', 'preview'].includes(t.dataset.act)) state.settingsMenu = false;
       if (t.dataset.act === 'collapse' && e.target.closest('[data-stop]')) return;
       // clicking inside a [data-stop] modal body must not trigger the overlay's close action
       if (t.classList.contains('modal-overlay') && e.target.closest('[data-stop]')) return;
@@ -2642,7 +2673,7 @@
       if (el && (el.tagName === 'SELECT' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) { handleAction(el.dataset.act, { el, i: el.dataset.i != null ? +el.dataset.i : null }); return true; }
       return false;
     };
-    document.addEventListener('input', (e) => { if (e.target.closest('[data-search]')) return onSearch(e); const tr = e.target.closest('[data-act="trans"]'); if (tr) { handleAction('trans', { el: tr }); return; } if (e.target.closest('[data-act]')) return; onField(e); });
+    document.addEventListener('input', (e) => { if (e.target.closest('[data-search]')) return onSearch(e); const tr = e.target.closest('[data-act="trans"]'); if (tr) { handleAction('trans', { el: tr }); return; } const gl = e.target.closest('[data-act="glass"]'); if (gl) { handleAction('glass', { el: gl }); return; } if (e.target.closest('[data-act]')) return; onField(e); });
     document.addEventListener('change', (e) => { if (e.target.closest('[data-search]')) return; if (routeFormControl(e)) return; onField(e); });
 
     // ---- map editor canvas interaction ----
@@ -2671,7 +2702,7 @@
       else if (e.key === 'Enter' && state.view === 'map' && !state.mapEd.dialog && state.mapEd.areaDraft && state.mapEd.areaDraft.length && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); finishArea(); }
       else if (e.key === 'Escape') {
         if (state.mapEd.dialog) { state.mapEd.dialog = null; render(); }
-        else if (state.mapEd.viewMenu || state.mapEd.translatePanel) { state.mapEd.viewMenu = false; state.mapEd.translatePanel = false; render(); }
+        else if (state.mapEd.viewMenu || state.mapEd.translatePanel || state.settingsMenu) { state.mapEd.viewMenu = false; state.mapEd.translatePanel = false; state.settingsMenu = false; render(); }
         else if (state.view === 'map' && (state.mapEd.edgeFrom || state.mapEd.areaDraft || state.mapEd.depPickFrom || state.mapEd.overlap)) { state.mapEd.edgeFrom = null; state.mapEd.areaDraft = null; state.mapEd.depPickFrom = false; state.mapEd.overlap = null; render(); }
         else if (state.samplesModal || state.saveDialog || state.exportModal || (state.view === 'map' && state.preview)) { state.samplesModal = false; state.saveDialog = false; state.exportModal = false; if (state.view === 'map') state.preview = false; render(); }
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && state.view === 'map' && !state.mapEd.dialog && state.mapEd.selset.length && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); deleteMapSelection(); }
