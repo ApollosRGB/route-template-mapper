@@ -2045,7 +2045,9 @@
         '<button class="btn btn-outline btn-sm btn-danger-ghost" data-act="mapDeleteSel">' + I.trash + '<span>Delete ' + ss.length + '</span></button></div>';
     }
     const sel = ss[0]; let x = '-', y = '-', extra = '';
-    const accHint = (el, kind) => '<div class="mi-row"><span>Access</span><b>' + (el.accessNodes || []).length + ' node(s)</b></div>' + (state.mapEd.mode === kind ? '<div class="mi-hint muted">Left-click a node to add/remove it as an access node.</div>' : '<div class="mi-hint muted">Pick the ' + (kind === 'station' ? 'Station' : 'Charger') + ' tool to assign access nodes.</div>');
+    const accHint = (el, kind) => '<div class="mi-row"><span>Access</span><b>' + (el.accessNodes || []).length + ' node(s)</b></div>' +
+      (el.accessNodes || []).map((a) => { const d = accessDistance(el, a); return d == null ? '' : '<div class="mi-row sub"><span>→ ' + esc(a.nodeId) + '</span><b>' + rnd(d) + ' m</b></div>'; }).join('') +
+      (state.mapEd.mode === kind ? '<div class="mi-hint muted">Left-click a node to add/remove it as an access node.</div>' : '<div class="mi-hint muted">Pick the ' + (kind === 'station' ? 'Station' : 'Charger') + ' tool to assign access nodes.</div>');
     if (sel.type === 'node') { const g = (state.map.navigationGraphs || []).find((gg) => gg.id === sel.graphId); const n = g && nodeById(g, sel.id); if (n) { x = rnd(n.graphX); y = rnd(n.graphY); } }
     else if (sel.type === 'station') { const f = allStations().find((s) => s.st.id === sel.id); if (f) { x = rnd(f.st.mapX); y = rnd(f.st.mapY); extra = '<div class="mi-row"><span>Size</span><b>' + rnd(f.st.length) + ' × ' + rnd(f.st.width) + ' m</b></div>' + accHint(f.st, 'station'); const grp = groupOfStation(sel.id); const wsIds = grp ? (grp.waitingSpots || []).map((w) => w && w.id).filter(Boolean) : []; extra += '<div class="mi-row"><span>Waiting</span><b>' + (wsIds.length ? esc(wsIds.join(', ')) : '—') + '</b></div>' + (wsIds.length ? '<div class="mi-hint muted">Waiting-spot nodes are highlighted orange. Double-click the station to change them.</div>' : ''); } }
     else if (sel.type === 'charger') { const c = (state.map.chargingStations || []).find((c) => c.id === sel.id); if (c) { x = rnd(c.mapX); y = rnd(c.mapY); extra = '<div class="mi-row"><span>Size</span><b>' + rnd(c.length) + ' × ' + rnd(c.width) + ' m</b></div>' + accHint(c, 'charger'); } }
@@ -2388,7 +2390,14 @@
     if (accSel && (accSel.type === 'station' || accSel.type === 'charger')) {
       const el = accessTarget(accSel);
       if (el) { const sp = w2s(el.mapX, el.mapY);
-        (el.accessNodes || []).forEach((a) => { const wp = nodeMapPos(a.navigationGraphId, a.nodeId); if (wp) { const npm = w2s(wp.x, wp.y); s += '<line class="m-acc" x1="' + sp.x + '" y1="' + sp.y + '" x2="' + npm.x + '" y2="' + npm.y + '"/><circle class="m-accnode" cx="' + npm.x + '" cy="' + npm.y + '" r="9"/>'; } });
+        (el.accessNodes || []).forEach((a) => {
+          const wp = nodeMapPos(a.navigationGraphId, a.nodeId); if (!wp) return;
+          const npm = w2s(wp.x, wp.y);
+          s += '<line class="m-acc" x1="' + sp.x + '" y1="' + sp.y + '" x2="' + npm.x + '" y2="' + npm.y + '"/><circle class="m-accnode" cx="' + npm.x + '" cy="' + npm.y + '" r="9"/>';
+          // distance station → linked node, right on the link (updates live while dragging)
+          const mid = { x: (sp.x + npm.x) / 2, y: (sp.y + npm.y) / 2 };
+          s += '<text class="m-dist" x="' + mid.x + '" y="' + (mid.y - 5) + '" text-anchor="middle">' + rnd(accessDistance(el, a)) + ' m</text>';
+        });
       }
     }
     // ---- reservation-dependency highlight (deps tool, or a selected first node) ----
@@ -2488,6 +2497,11 @@
     if (!OVERLAP_TYPES.includes(hit.type)) return null;
     const nodes = overlapCandidates(hit).filter((c) => c.type === 'node' && (!activeGraphId || c.graphId === activeGraphId));
     return nodes.length ? { graphId: nodes[0].graphId, nodeId: nodes[0].id } : null;
+  }
+  // Straight-line distance in metres between a station/charger and one of its access nodes.
+  function accessDistance(el, a) {
+    const wp = nodeMapPos(a.navigationGraphId, a.nodeId);
+    return wp ? Math.hypot(wp.x - el.mapX, wp.y - el.mapY) : null;
   }
   function accessTarget(sel) {
     if (!sel) return null;
@@ -2782,7 +2796,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, nextNodeId, nodeIdPrefix, renumberGraphNodes, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides, refreshAllStationValues };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, nextNodeId, nodeIdPrefix, renumberGraphNodes, accessDistance, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides, refreshAllStationValues };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

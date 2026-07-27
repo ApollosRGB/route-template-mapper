@@ -865,3 +865,12 @@ input[type="text"], input[type="number"], select, textarea { background: hsl(var
 .mt-menu { border-radius: 16px; }
 .modal { border-radius: 20px; }
 .landing-card { border-radius: 24px; }
+
+/* ===== v2.3: distance label on station/charger access links ===== */
+.m-dist {
+  fill: hsl(var(--success)); font-size: 11px; font-weight: 600;
+  font-family: ui-monospace, Consolas, monospace; pointer-events: none; user-select: none;
+  paint-order: stroke fill; stroke: hsl(var(--background)); stroke-width: 3.5px; stroke-linejoin: round;
+}
+.mi-row.sub { padding-left: 8px; font-size: 11.5px; }
+.mi-row.sub span { color: hsl(var(--muted-foreground)); }

@@ -147,6 +147,12 @@ back (your existing template work is kept where graphs still match).
       stays selected). The Charger tool works the same way for a
       charging station's access nodes. In other tools, clicking a
       node just selects it.
+    * DISTANCE: selecting a station or charger prints the distance
+      in metres on each link to its access node(s) - on the line
+      itself and in the info box (one row per linked node). The
+      numbers update live while you drag the station or the node,
+      so you can place things at an exact spacing. They follow the
+      Decimals setting in the View menu.
 - ICONS: each element type has its own shape + colour — blue circle
   (node), teal rounded-square (station), red hexagon (charger), amber
   triangle (traffic light), violet outline (area).

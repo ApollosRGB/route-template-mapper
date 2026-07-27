@@ -984,6 +984,54 @@ console.log('\n[W] Node IDs differ per graph (0,1 · 00,01 · 000,001) + Renumbe
   ok('next new node continues the scheme (011)', api.nextNodeId(tusk) === '011', api.nextNodeId(tusk));
 }
 
+// ============================ X) v2.3: distance station → linked node ============================
+console.log('\n[X] Distance between a station/charger and its linked (access) nodes');
+{
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  click(q(w, '[data-act="mapEdit"]'), w);
+  const api = w.__rtm, s = api.state;
+  const repaint = () => w.document.defaultView.dispatchEvent(new w.Event('resize'));
+
+  // K1 sits at (16, 5.6637); its access node 17 is at (16, 6.177) → 0.513 m apart
+  const k1 = api.allStations().find((x) => x.st.id === 'K1').st;
+  ok('accessDistance computes the straight-line metres', Math.abs(api.accessDistance(k1, k1.accessNodes[0]) - 0.5133) < 0.0001, api.accessDistance(k1, k1.accessNodes[0]) + '');
+
+  // click through the real path so the canvas AND the info box refresh, exactly like in the app
+  const clickEl = (sel) => { const el = q(w, sel); el.dispatchEvent(new w.MouseEvent('mousedown', { bubbles: true, button: 0 })); w.document.dispatchEvent(new w.MouseEvent('mouseup', { bubbles: true })); };
+
+  ok('no distance label until something is selected', !q(w, 'text.m-dist'));
+  clickEl('rect[data-mt="station"][data-mid="K1"]');
+  const lbl = q(w, 'text.m-dist');
+  ok('selecting the station draws a distance label on the link', !!lbl && lbl.textContent === '0.513 m', lbl && lbl.textContent);
+  ok('one label per access node', qa(w, 'text.m-dist').length === k1.accessNodes.length);
+  const line = q(w, 'line.m-acc');
+  const mid = { x: (+line.getAttribute('x1') + +line.getAttribute('x2')) / 2, y: (+line.getAttribute('y1') + +line.getAttribute('y2')) / 2 };
+  ok('label sits on the middle of the link', Math.abs(+lbl.getAttribute('x') - mid.x) < 0.01 && Math.abs(+lbl.getAttribute('y') - (mid.y - 5)) < 0.01);
+  ok('info panel lists the distance per linked node', /→\s*17/.test(q(w, '#map-info').textContent) && /0\.513 m/.test(q(w, '#map-info').textContent), q(w, '#map-info').textContent);
+
+  // moving the station updates the number live
+  k1.mapY = k1.mapY - 1; clickEl('rect[data-mt="station"][data-mid="K1"]');
+  ok('distance follows when the station moves', q(w, 'text.m-dist').textContent === '1.513 m', q(w, 'text.m-dist').textContent);
+  ok('info panel follows too', /1\.513 m/.test(q(w, '#map-info').textContent));
+
+  // decimals setting is respected
+  s.mapEd.decimals = 1; clickEl('rect[data-mt="station"][data-mid="K1"]');
+  ok('label honours the decimals setting', q(w, 'text.m-dist').textContent === '1.5 m', q(w, 'text.m-dist').textContent);
+  s.mapEd.decimals = 3;
+
+  // chargers behave the same, incl. a node on another graph
+  s.map.chargingStations.push({ id: 'C1', mapX: 26.058, mapY: 8.424, mapZ: 0, length: 5, width: 5, height: 5, controlled: true,
+    accessNodes: [{ navigationGraphId: 'KMP 400P-1-5G diffDrive', nodeId: '13' }] });
+  repaint(); clickEl('polygon[data-mt="charger"][data-mid="C1"]');
+  ok('charger link shows 0 m when it sits exactly on its node', q(w, 'text.m-dist').textContent === '0 m', q(w, 'text.m-dist').textContent);
+
+  // a stale access node (deleted target) must not break the paint
+  s.map.chargingStations[0].accessNodes.push({ navigationGraphId: 'KMP 400P-1-5G diffDrive', nodeId: 'GONE' });
+  repaint();
+  ok('missing access-node targets are skipped safely', qa(w, 'text.m-dist').length === 1 && !/NaN/.test(q(w, '#map-svg').innerHTML));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);
