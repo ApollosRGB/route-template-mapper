@@ -932,6 +932,58 @@ console.log('\n[V] Settings menu (theme, glass slider, navigation) + liquid glas
   ok('map-view menu offers Route templates instead of Map editor', !!q(w, '#settings-menu [data-act="route"]') && !q(w, '#settings-menu [data-act="mapEdit"]'));
 }
 
+// ============================ W) v2.2: per-graph node-ID scheme + renumber ============================
+console.log('\n[W] Node IDs differ per graph (0,1 · 00,01 · 000,001) + Renumber graph');
+{
+  const w = await boot();
+  click(q(w, '[data-act="newMap"]'), w);
+  const api = w.__rtm, s = api.state;
+  const g1 = s.map.navigationGraphs[0];
+  s.map.navigationGraphs.push(api.newGraph('graph2'), api.newGraph('graph3'));
+  const g2 = s.map.navigationGraphs[1], g3 = s.map.navigationGraphs[2];
+
+  ok('graph 1 has no prefix', api.nodeIdPrefix(g1) === '');
+  ok('graph 2 prefixes one zero', api.nodeIdPrefix(g2) === '0');
+  ok('graph 3 prefixes two zeros', api.nodeIdPrefix(g3) === '00');
+
+  // fill each graph with 11 nodes through the real generator
+  const fill = (g, n) => { const out = []; for (let i = 0; i < n; i++) { const id = api.nextNodeId(g); g.nodes.push({ id, graphX: i, graphY: 0, graphZ: 0 }); out.push(id); } return out; };
+  const a = fill(g1, 11), b = fill(g2, 11), c = fill(g3, 11);
+  ok('graph 1 → 0,1,2 … 9,10', a.join(',') === '0,1,2,3,4,5,6,7,8,9,10', a.join(','));
+  ok('graph 2 → 00,01,02 … 09,010', b.join(',') === '00,01,02,03,04,05,06,07,08,09,010', b.join(','));
+  ok('graph 3 → 000,001,002 … 009,0010', c.join(',') === '000,001,002,003,004,005,006,007,008,009,0010', c.join(','));
+  ok('no ID collides across graphs', new Set([...a, ...b, ...c]).size === 33);
+  ok('the 11th node differs per graph (10 / 010 / 0010)', a[10] === '10' && b[10] === '010' && c[10] === '0010');
+}
+{
+  // a graph that already uses a zero-padded style keeps it (loaded maps are not disturbed)
+  const w = await boot();
+  click(q(w, '[data-act="loadExample"]'), w);
+  const api = w.__rtm, s = api.state;
+  const kuka = s.map.navigationGraphs[0], tusk = s.map.navigationGraphs[1];
+  ok('tusk keeps its 4-digit style (0001, not 00)', api.nextNodeId(tusk) === '0001', api.nextNodeId(tusk));
+  ok('kuka (graph 1) still numbers plainly', api.nextNodeId(kuka) === '0', api.nextNodeId(kuka));
+
+  // --- Renumber graph: tusk (graph 2) → 00, 01, 02 … 010, with every reference updated ---
+  api.state.deps = api.normalizeDeps([{ fromNode: '0003', fromNavigationGraph: 'tusk', to: [{ navigationGraph: 'tusk', nodes: ['0011'] }] }]);
+  const changed = api.renumberGraphNodes(tusk);
+  ok('renumber reports the changed count', changed === 11, changed + '');
+  ok('tusk node IDs follow the graph-2 scheme', tusk.nodes.map((n) => n.id).join(',') === '00,01,02,03,04,05,06,07,08,09,010', tusk.nodes.map((n) => n.id).join(','));
+  ok('edges follow (endpoints + regenerated IDs)', tusk.edges.some((e) => e.startNodeId === '00' && e.endNodeId === '06' && e.id === '00_06'), JSON.stringify(tusk.edges[0]));
+  ok('no edge still points at an old ID', !tusk.edges.some((e) => /^\d{4}$/.test(e.startNodeId) || /^\d{4}$/.test(e.endNodeId)));
+  ok('station access nodes follow (T1 → 02)', api.allStations().find((x) => x.st.id === 'T1').st.accessNodes[0].nodeId === '02');
+  ok('waiting spots follow (WS_tusk → 04, 010)', s.map.waitingSpots.find((x) => x.id === 'WS_tusk').nodes.map((n) => n.nodeId).join(',') === '04,010');
+  ok('reservation dependencies follow', s.deps[0].fromNode === '02' && s.deps[0].to[0].nodes[0] === '06', JSON.stringify(s.deps[0]));
+  const tuskBundle = s.graphs.find((x) => x.graphId === 'tusk').bundle;
+  const dropMap = tuskBundle.mappings.find((m) => m.template === 'TUSK_DROPOFF' && (m.entries.find((e) => e.key === 'A') || {}).value === '02');
+  ok('route-template mapping node values follow', !!dropMap, tuskBundle.mappings.filter((m) => m.template === 'TUSK_DROPOFF').map((m) => m.id).join(','));
+  ok('mapping IDs are refreshed to the new node IDs', dropMap && dropMap.id === 'TUSK_DROPOFF_02_mapping', dropMap && dropMap.id);
+  ok('non-node entries are untouched by the renumber', dropMap && (dropMap.entries.find((e) => e.key === 'DROP_EXTERNAL_STATION_ID_A') || {}).value === 'T1');
+  ok('kuka (other graph) is untouched', kuka.nodes.some((n) => n.id === '13') && s.map.navigationGraphs[0].edges.some((e) => e.id === '1-10'));
+  ok('the renumbered map still exports cleanly', api.canonicalizeMap(s.map).navigationGraphs[1].nodes[0].id === '00');
+  ok('next new node continues the scheme (011)', api.nextNodeId(tusk) === '011', api.nextNodeId(tusk));
+}
+
 console.log('\n──────────────────────────────');
 console.log(passed + ' passed, ' + failed + ' failed');
 process.exit(failed ? 1 : 0);

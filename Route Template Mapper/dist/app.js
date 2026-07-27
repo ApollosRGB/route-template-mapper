@@ -234,8 +234,8 @@
     });
   }
 
-  function autoMappingId(m) {
-    const tpl = state.bundle.templates.find((t) => t.id === m.template);
+  function autoMappingId(m, bundle) {
+    const tpl = (bundle || state.bundle).templates.find((t) => t.id === m.template);
     if (!tpl || !m.template) return m.id;
     const refs = templateNodeRefs(tpl);
     const vals = refs.map((k) => { const e = m.entries.find((x) => x.key === k); return e ? String(e.value).trim() : ''; }).filter((x) => x !== '');
@@ -460,10 +460,63 @@
     return out;
   }
   function idStyleWidth(g) { let w = 0; (g.nodes || []).forEach((n) => { if (/^\d+$/.test(n.id) && n.id.length > 1 && n.id[0] === '0') w = Math.max(w, n.id.length); }); return w; }
+  // Per-graph node-ID scheme: the graph's position prepends that many zeros to a plain counter,
+  // so ids stay distinguishable AND unique across graphs —
+  //   graph 1: 0,1,…,9,10,11 · graph 2: 00,…,09,010,011 · graph 3: 000,…,009,0010,0011
+  function nodeIdPrefix(g) { const i = ((state.map && state.map.navigationGraphs) || []).indexOf(g); return i > 0 ? '0'.repeat(i) : ''; }
+  function nodeIdSchemeLabel(g) { const p = nodeIdPrefix(g); return p + '0, ' + p + '1, ' + p + '2 …'; }
+  // Do this graph's ids already read as "<prefix><plain counter>"? (e.g. graph 2: 00…09, 010)
+  // Distinguishes the scheme from a legacy fixed-width padded style such as tusk's 0000/0011.
+  function nodeIdsFollowScheme(g) {
+    const ids = (g.nodes || []).map((n) => n.id);
+    if (!ids.length) return false;
+    const re = new RegExp('^' + nodeIdPrefix(g) + '(0|[1-9]\\d*)$');
+    return ids.every((id) => re.test(id));
+  }
   function nextNodeId(g) {
-    const used = new Set((g.nodes || []).map((n) => n.id)); const w = idStyleWidth(g);
-    for (let i = 0; i < 100000; i++) { const id = w ? String(i).padStart(w, '0') : String(i); if (!used.has(id)) return id; }
+    const used = new Set((g.nodes || []).map((n) => n.id));
+    // a graph on a legacy zero-padded style keeps it; anything else follows its position scheme
+    const w = nodeIdsFollowScheme(g) ? 0 : idStyleWidth(g);
+    const pre = w ? '' : nodeIdPrefix(g);
+    for (let i = 0; i < 100000; i++) { const id = w ? String(i).padStart(w, '0') : pre + i; if (!used.has(id)) return id; }
     return String(Date.now());
+  }
+  // Rewrite every node id of a graph to its scheme (0,1,2… with the graph's zero prefix) and
+  // update everything that references those nodes. Returns how many ids changed.
+  function renumberGraphNodes(g) {
+    const pre = nodeIdPrefix(g), ren = {};
+    (g.nodes || []).forEach((n, i) => { ren[n.id] = pre + i; });
+    const changed = Object.keys(ren).filter((k) => ren[k] !== k).length;
+    if (!changed) return 0;
+    const to = (id) => (ren[id] != null ? ren[id] : id);
+    g.nodes.forEach((n) => { n.id = ren[n.id]; });
+    const sep = edgeSep(g), usedE = new Set();
+    (g.edges || []).forEach((e) => {
+      e.startNodeId = to(e.startNodeId); e.endNodeId = to(e.endNodeId);
+      e.id = uniqueId(usedE, e.startNodeId + sep + e.endNodeId); usedE.add(e.id);
+    });
+    const fixAccess = (arr) => (arr || []).forEach((a) => { if (a.navigationGraphId === g.id) a.nodeId = to(a.nodeId); });
+    allStations().forEach(({ st }) => fixAccess(st.accessNodes));
+    (state.map.chargingStations || []).forEach((c) => fixAccess(c.accessNodes));
+    (state.map.limitedCapacityAreas || []).forEach((l) => fixAccess(l.nodes));
+    (state.map.waitingSpots || []).forEach((w) => fixAccess(w.nodes));
+    (state.deps || []).forEach((d) => {
+      if (d.fromNavigationGraph === g.id) d.fromNode = to(d.fromNode);
+      (d.to || []).forEach((t) => { if (t.navigationGraph === g.id) t.nodes = t.nodes.map(to); });
+    });
+    // route-template mappings: only the template's node-reference entries, then refresh the ids
+    const gr = (state.graphs || []).find((x) => x.graphId === g.id);
+    if (gr) (gr.bundle.mappings || []).forEach((m) => {
+      if (m.navigationGraphId && m.navigationGraphId !== g.id) return;
+      const t = (gr.bundle.templates || []).find((x) => x.id === m.template);
+      if (!t) return;
+      const refs = new Set(templateNodeRefs(t));
+      (m.entries || []).forEach((e) => { if (refs.has(e.key) && ren[e.value] != null) e.value = ren[e.value]; });
+      m.id = autoMappingId(m, gr.bundle);
+    });
+    state.mapEd.selset = (state.mapEd.selset || []).map((s) => (s.type === 'node' && s.graphId === g.id ? { type: 'node', id: to(s.id), graphId: s.graphId } : s));
+    state.mapEd.overlap = null; state.mapEd.edgeFrom = null;
+    return changed;
   }
   function edgeSep(g) { for (const e of g.edges || []) { if (e.id.includes('-')) return '-'; if (e.id.includes('_')) return '_'; } return '_'; }
   function edgeIdFor(g, a, b) { return a + edgeSep(g) + b; }
@@ -1488,6 +1541,18 @@
       case 'graphRemove': { const g = mapGraph(); if (!g) return; if (!confirm('Remove graph "' + g.id + '" with its nodes and edges?')) return; cleanAccessNodes(g.id); state.map.navigationGraphs.splice(state.mapEd.gi, 1); if (state.mapEd.gi >= state.map.navigationGraphs.length) state.mapEd.gi = Math.max(0, state.map.navigationGraphs.length - 1); state.mapEd.selset = []; mapDirty(); persist(); render(); return; }
       case 'graphTranslate': { if (mapGraph()) { state.mapEd.translatePanel = !state.mapEd.translatePanel; render(); } return; }
       case 'graphEditFull': { const g = mapGraph(); if (g) { state.mapEd.dialog = { kind: 'graph', id: g.id }; render(); } return; }
+      case 'graphRenumber': {
+        const d = state.mapEd.dialog;
+        const g = (state.map.navigationGraphs || []).find((x) => x.id === (d && d.id)) || mapGraph();
+        if (!g) return;
+        const n = (g.nodes || []).length;
+        if (!n) { toast('No nodes', 'This graph has no nodes to renumber.', 'error'); return; }
+        if (!confirm('Renumber all ' + n + ' node IDs of "' + g.id + '" to ' + nodeIdSchemeLabel(g) + '?\n\nEdges, station/charger access nodes, waiting spots, reservation dependencies and route-template mappings are updated to match.')) return;
+        const c = renumberGraphNodes(g);
+        mapDirty(); persist(); render();
+        toast(c ? 'Renumbered ' + c + ' node(s)' : 'Already numbered', c ? 'New IDs: ' + nodeIdSchemeLabel(g) : 'Every node already follows this graph’s scheme.', 'success');
+        return;
+      }
       case 'trans': { const g = mapGraph(); if (g) { const v = +ctx.el.value || 0, ax = ctx.el.dataset.axis; if (ax === 'x') g.graphToMapTransformation.xTranslation = v; else if (ax === 'y') g.graphToMapTransformation.yTranslation = v; else g.graphToMapTransformation.zRotation = v; mapDirty(); persist(); paintCanvas(); } return; }
       case 'edgeBidir': { state.mapEd.edgeBidir = !!ctx.el.checked; return; }
       case 'areaFinish': finishArea(); return;
@@ -2049,7 +2114,13 @@
       body = mdField('Graph ID', 'md-id', g.id) +
         '<div class="card-subtitle muted" style="margin:6px 0;">Transformation to map coordinates</div>' +
         '<div class="grid-3">' + mdField('Translation X [m]', 'md-tx', rnd(tf.xTranslation), 'number') + mdField('Translation Y [m]', 'md-ty', rnd(tf.yTranslation), 'number') + mdField('Rotation Z [rad]', 'md-rz', rnd(tf.zRotation), 'number') + '</div>' +
-        '<div class="field"><label>AGV types (one per line — vendor:typeName)</label><textarea id="md-agv" rows="2">' + esc(agv) + '</textarea></div>';
+        '<div class="field"><label>AGV types (one per line — vendor:typeName)</label><textarea id="md-agv" rows="2">' + esc(agv) + '</textarea></div>' +
+        '<div class="card-subtitle muted" style="margin:6px 0;">Node IDs</div>' +
+        '<div class="hint">New nodes in this graph are named <b class="mono">' + esc(nodeIdSchemeLabel(g)) + '</b> — graph ' +
+          (((state.map.navigationGraphs || []).indexOf(g)) + 1) + ' of the map, so its IDs stay distinct from the other graphs.</div>' +
+        '<div style="margin-top:8px;">' + btn('graphRenumber', I.refresh, 'Renumber all ' + (g.nodes || []).length + ' node IDs', 'btn-outline btn-sm',
+          'Rewrite every node ID of this graph to ' + nodeIdSchemeLabel(g) + ' and update all references') + '</div>' +
+        '<div class="hint">Applies immediately (edges, access nodes, waiting spots, dependencies and route-template mappings follow along).</div>';
     } else if (d.kind === 'bg') {
       const bg = state.mapEd.bg; if (!bg) { state.mapEd.dialog = null; return ''; }
       title = 'Background scale & position';
@@ -2711,7 +2782,7 @@
 
   // Test hook (harmless in production; used by the jsdom integration test).
   if (typeof window !== 'undefined') window.__rtm = { state, addEdge, mapGraph, normalizeMap, canonicalizeMap, reconcileGraphsAfterMapEdit, g2m, m2g, rnd, allStations, newGraph, emptyMap, edgeIdFor,
-    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides, refreshAllStationValues };
+    normalizeDeps, canonicalizeDeps, toggleDepTarget, onDepNodeClick, onWsNodeClick, finishArea, groupOfStation, emergencyAreaIds, nextWsId, depsFileName, removeNodeFromExtras, renameNodeInExtras, renameGraphInExtras, removeGraphFromExtras, overlapCandidates, elMapPos, nodeMapPos, nodeFromHit, nextNodeId, nodeIdPrefix, renumberGraphNodes, generateFromMap, pruneStaleMappings, syncBundlesWithMap, stationGeometryOverrides, refreshAllStationValues };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

@@ -157,6 +157,20 @@ back (your existing template work is kept where graphs still match).
   double-clicking the station or charger; the selected one's
   footprint highlights gold. The footprint is display-only: clicks
   pass through it to nodes and edges underneath.
+- NODE IDs ARE PER GRAPH: each navigation graph names its new
+  nodes with as many leading zeros as its position in the map,
+  so you can tell at a glance which graph a node belongs to and
+  IDs never clash between graphs:
+      graph 1:  0    1    2  ...  9    10    11
+      graph 2:  00   01   02 ...  09   010   011
+      graph 3:  000  001  002 ... 009  0010  0011
+  A graph that already uses a fixed-width style (e.g. 0000,
+  0011 from a loaded map) keeps that style instead.
+  RENUMBER: the graph edit dialog (the translate panel's
+  "Name & AGV types..." button) has "Renumber all N node IDs" -
+  it rewrites the whole graph to its scheme and updates every
+  reference: edges, station/charger access nodes, waiting
+  spots, reservation dependencies and route-template mappings.
 - RIGHT-CLICK = CREATE with the chosen tool:
     * Node/Station/Charger/Light: right-click the canvas to place one.
     * Edge: right-click the start node, then the end node.
